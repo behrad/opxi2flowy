@@ -1,0 +1,20 @@
+{
+  "name": "opxi2flowy",
+  "version": "0.0.1",
+  "description": "Opxi2 Flow Based Messaging Core",
+  "main": "main.js",
+  "scripts": {
+    "postinstall": "node -e \"require('dataflo.ws').install('opxi2flowy')\"",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": "",
+  "keywords": [
+    "opxi2",
+    "nodejs",
+    "redis",
+    "workflow"
+  ],
+  "author": "Behrad",
+  "license": "BSD",
+  "readmeFilename": "README.md"
+}

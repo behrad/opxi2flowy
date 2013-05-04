@@ -1,0 +1,56 @@
+// json 
+{
+	"requires": [ "misc" ],
+	"daemon": {
+		"test": {
+			"initiator": [ "redis_event", "worker" ]
+		}
+	},
+	"initiator":{
+        "worker": {
+            "workflows": [{
+                "name": "flowyjob",
+                "concurrency": 2,
+                "tasks": [{
+					"$function": "console.print",
+					"$args": [ "Job Done result: ", "{$job.data}" ]
+				}, {
+                    "$class": "job",
+                    "$method": "done",
+					"job": "{$job}",
+					"done": "{$done}",
+					"message": "{$job.data.name}",
+					"$set": "data.job_done"
+                }]
+            }]
+        },
+		"redis_event": {
+			"workflows": [{
+				"pattern": "opxi2.df1.*",
+				"tasks": [{
+					"$function": "JSON.parse",
+					"$args": [ "{ \"_id\": \"2029d0802fdb369045b4286d5ae5ab2b\", \"a\":3, \"age\":47}" ],
+                    "$set": "data.ddd"
+				},{
+					"$function": "console.print",
+					"$args": [ "New message: ", "{$data.ddd}" ]
+				},{
+					"$class": "couch",
+					"$method": "update",
+                    "id": "2029d0802fdb369045b4286d5ae5ab2b",
+                    "data": "{$data.ddd}",
+					"$set": "data.document"
+				},{
+					"$class": "job",
+					"name": "send-{$data.ddd._id}",
+                    "$retires": 1,
+                    "data": "{$data.document}",
+                    "$set": "data.testi"
+				},{
+					"$function": "console.print",
+					"$args": [ "Print job result: ", "{$data.document}" ]
+				}]
+			}]
+		}
+	}
+}
