@@ -1,8 +1,6 @@
-dataflo.ws Redis module
-=======================
+Opxi2 Flowbased Messaging Platform
+==================================
 
-Provides initiator and tasks for Redis pub/sub communication.
+Integration of Opxi2 Node.js Messaging core with Flow based development
 
-Part of [dataflo.ws framework](https://github.com/apla/dataflo.ws).
-
-ReadMe!
+Part of [dataflo.ws framework](https://github.com/apla/dataflo.ws)
