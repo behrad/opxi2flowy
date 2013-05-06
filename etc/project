@@ -3,8 +3,11 @@
 	"requires": [ "opxi2node/message" ],
 	"daemon": {
 		"test": {
-			"initiator": [ "redis_event", "worker", "couch_changes" ]
-		}
+			"initiator": [ "couch_changes" ]
+		},
+        "main": {
+            "initiator": [ "redis_event", "worker" ]
+        }
 	},
 	"initiator":{
         "worker": {
@@ -91,39 +94,51 @@
 		},
         "couch_changes":{
             "workflows":[{
+                "filter": "query/important",
                 "tasks":[{
                     "$class": "redis",
                     "$method": "pages",
                     "key": "oypajdxg-campaign:targets",
                     "pageSize": "10",
-                    "$set": "data.pages"
+                    "$set": "data.pages",
+                    "$empty": "data.no_results"
+                },{
+                    "if": "{$data.no_results}",
+                    "$function": "console.print",
+                    "$args": [ "Page result: ", "{$data.no_results}" ]
                 },{
                     "$function":"Array",
-                    "$args":[ "{\"key\":\"data\"}" ],
+                    "$args":[
+                        ["{\"key\":\"data\"}"],
+                        ["{\"key2\":\"data2\"}"]
+                    ],
                     "$set": "data.testArr"
                 },{
                     "$every": "{$data.testArr}",
-                    "$collect": "result",
+                    "$collect": "result3",
                     "$tasks":[{
                         "$function": "console.print",
                         "$args": [ "Dataaaa: ", "{#every.item}" ]
                     },{
-                        "$function": "JSON.parse",
-                        "$args": [ "{#every.item}" ],
-                        "$set": "jsonItem"
-                    },{
-                        "$function": "console.print",
-                        "$args": [ "Item: ", "{#jsonItem}" ]
-                    },{
-                        "$function": "JSON.parse",
-                        "$args": [ "{#every.item}" ],
-                        "$set": "result"
+                        "$every": "{#every.item}",
+                        "$collect": "result2",
+                        "$tasks":[{
+                            "$function": "console.print",
+                            "$args": [ "Dataaaa Inner: ", "{#every.item}" ]
+                        },{
+                            "$function": "JSON.parse",
+                            "$args": [ "{#every.item}" ],
+                            "$set": "result2"
+                        }],
+                        "$set": "result3"
                     }],
-                    "$set": "data.results"
+                    "$set": "data.result2"
                 },{
                     "$function": "console.print",
-					"$args": [ "Doc Change result: ", "{$data.results}" ]
+                    "$args":[ "Test it ", "{$data.result2}" ]
                 }]
+            },{
+
             }]
         }
 	}

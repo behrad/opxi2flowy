@@ -1,0 +1,8 @@
+{
+    "all": {
+        "tasks":[{
+            "$function": "console.print",
+            "$args": [ "DOC @@@@@@@@@@@@@@@@@@ ", "{$change.doc}" ]
+        }]
+    }
+}

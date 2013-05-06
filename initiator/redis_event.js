@@ -3,6 +3,7 @@ var EventEmitter   = require('events').EventEmitter,
     opxi2 = require( 'opxi2node'),
 	Workflow = require('dataflo.ws/workflow');
 
+
 var redis_event = module.exports = function (config) {
 	this.config = util.extend( {}, redis_event.defaultConfig );
 	if (config) {
