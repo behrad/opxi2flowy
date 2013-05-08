@@ -1,0 +1,50 @@
+[
+    {
+        "$class": "redis",
+        "$method": "getHash",
+        "key": "{$message}",
+        "$set": "data.campaignObj"
+    },
+    {
+        "$class": "message",
+        "$method": "as_campaign",
+        "data": "{$data.campaignObj}",
+        "$set": "campaign"
+    },
+    {
+        "$class": "couch",
+        "id": "{$campaign.id}",
+        "doc": "{$campaign}",
+        "$set": "data.logResp"
+    },
+    {
+        "$class": "message",
+        "$method": "attach_body",
+        "message": "{$campaign}",
+        "$set": "msg"
+    },
+    {
+        "$class": "job",
+        "name": "campaign-run",
+        "data": "{$campaign.id}",
+        "$set": "data.jobResult"
+    },
+    {
+        "$class": "redis",
+        "$method": "setValue",
+        "key": "{$message}",
+        "property": "status",
+        "value": "Queued"
+    },
+    {
+        "$class": "redis",
+        "$method": "publish",
+        "channel": "opxi2.campaign.change.{$message}",
+        "message": "{$message}"
+    },
+    {
+        "if": "{$data.jobResult}",
+        "$function": "console.print",
+        "$args": [ "Campaign-Run Job's result: ", "{$data.jobResult}"]
+    }
+]

@@ -1,5 +1,4 @@
 var task = require ('dataflo.ws/task/base'),
-    opxi2 = require( 'opxi2node'),
     Message = require( 'opxi2node/message'),
     util = require( 'util' );
 
@@ -16,12 +15,45 @@ util.extend( msg.prototype, {
      * Create a new message
      */
     run: function () {
-        this.completed( new Message(  this.media, this.data ) );
+        var msg = new Message( this.data );
+        if( this.id ) {
+            msg._id = this.id;
+        }
+        this.completed( msg );
     },
 
-    test: function() {
-//        console.log( "$$$$$$$$$$$$ %j", this.data );
-        this.completed( { k1: "value" } );
+    attach_body: function() {
+        this.message.attachBody( function(err){
+            if( err ) {
+                this.failed( { error: err } );
+            } else {
+                this.completed( this.message );
+            }
+        }.bind( this ));
+
+    },
+
+    as_campaign: function() {
+        var self = this;
+        var msg = new Message( this.data );
+        msg.as_campaign();
+        self.completed( msg );
+    },
+
+    from_campaign: function() {
+        var self = this;
+        var msg = new Message( this.dest, this.campaign );
+        self.completed( msg );
+
+        /*uuid.get_uuid( function( id ) {
+            msgData.id = id;
+            try {
+
+            } catch( e ) {
+                console.error( e );
+                self.failed( {error: e } );
+            }
+        });*/
     },
 
     /**
@@ -32,13 +64,6 @@ util.extend( msg.prototype, {
      * return publish command response
      */
     filter: function() {
-        var brokerConnection = opxi2.brokerClient();
-        var resp = brokerConnection.publish( this.channel, this.message );
-        brokerConnection.end();
-        this.completed( resp );
     }
 
 });
-
-
-

@@ -42,7 +42,6 @@ couchChanges.prototype.listen = function( workflowConfig ) {
         console.log( "Please install nano for CouchDB changes listener to work" );
         return;
     }
-    console.log( "aaaaaaaaaaaaaaaaaa " + workflowConfig.filter || couchChanges.defaultConfig.filter );
     var feed = opxi2.db.follow({
         filter: workflowConfig.filter || couchChanges.defaultConfig.filter,
         since: workflowConfig.since || "now",

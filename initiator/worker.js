@@ -39,6 +39,7 @@ worker.prototype.ready = function () {
  *  job: the created job object
  */
 worker.prototype.listen = function( workflowConfig ) {
+    var self = this;
     opxi2.taskq.process( workflowConfig.name, workflowConfig.concurrency, function (job, done) {
         console.log("Receive job %s %j", workflowConfig.name, job.data );
         var wf = new Workflow(
@@ -47,18 +48,18 @@ worker.prototype.listen = function( workflowConfig ) {
         });
     //	wf.data.job = job;
     //	wf.data.done = done;
-        wf.on( 'completed', this.onCompleted(job,done).bind( this ) );
-        wf.on( 'failed', this.onFailed(job,done).bind( this ) );
+        wf.on( 'completed', self.onCompleted(job,done).bind( self ) );
+        wf.on( 'failed', self.onFailed(job,done).bind( self ) );
         wf.run();
     });
 };
 
 worker.prototype.onCompleted = function( job, done ) {
-    console.log( "Completeeeeeeeeeeeeeeeed! ");
     return function( wf ) {
-        var result = wf[this.$backdata];
+        var result = wf[ wf.$backdata ];
         if ( !Workflow.isEmpty(result) ) {
-            job.set( 'data' , JSON.stringify( result ), done );
+            console.log( "Completed with data! '%j', '%j', %j", result, wf.$backdata, wf );
+            job.set( 'data' , JSON.stringify(result), done );
         } else {
             done();
         }
@@ -66,7 +67,6 @@ worker.prototype.onCompleted = function( job, done ) {
 };
 
 worker.prototype.onFailed = function( job, done ) {
-    console.log( "Faiiiiiiiiiiiiiled! ");
     return function( wf ) {
         done( { error: 'failed', wf: wf } );
     }.bind( this );

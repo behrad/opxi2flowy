@@ -29,6 +29,9 @@ util.extend( job.prototype, {
     run: function () {
         var self = this;
         self.emit( 'warn', 'Creating kue job ' + self.name );
+        if( !self.data.title ) {
+            self.data.title = "Job " + self.name;
+        }
         var my_job = opxi2.taskq.create( self.name, self.data );
         if( self.$delay && !isNaN( self.$delay ) ) {
             my_job = my_job.delay( self.$delay );
@@ -37,9 +40,7 @@ util.extend( job.prototype, {
             .attempts( self.$retires || job.defaultConfig.$retires )
             .save();
         my_job.on( 'complete', function() {
-            console.log( "@@@@@@@@@@@@@@@@@@@@@@ Completed! %j", my_job.id );
             my_job.get( 'data', function(error, result) {
-//                console.log( "11111111111111111111111 data", my_job.data );
                 if (error) {
                     self.emit( 'error', 'No job complete data: ' + error );
                 }

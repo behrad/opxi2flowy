@@ -1,0 +1,87 @@
+[
+    {
+        "$class": "redis",
+        "$method": "getHash",
+        "key": "{$job.data}",
+        "$set": "data.campaignObj"
+    },
+    {
+        "$class": "redis",
+        "$method": "setValue",
+        "key": "{$job.data}",
+        "property": "status",
+        "value": "Started"
+    },
+    {
+        "$class": "redis",
+        "$method": "publish",
+        "channel": "opxi2.campaign.change.{$job.data}",
+        "message": "{$job.data}"
+    },
+    {
+        "$function": "console.print",
+        "$args": [ "Process Campaign: ", "{$data.campaignObj}" ]
+    },
+    {
+        "$class": "redis",
+        "$method": "pages",
+        "key": "{$data.campaignObj.targets}",
+        "pageSize": "10",
+        "$set": "data.pages",
+        "$empty": "data.no_results"
+    },
+    {
+        "if": "{$data.no_results}",
+        "$function": "console.print",
+        "$args": [ "No Destinations!: ", "{$data.campaignObj.targets}" ]
+    },
+    {
+        "if": "{$data.campaignObj}",
+        "$function": "console.print",
+        "$args": [ "Campaign: ", "{$data.campaignObj}" ]
+    },
+    {
+        "$every": "{$data.pages}",
+        "$tasks": [
+            {
+                "$function": "console.print",
+                "$args": [ "Hah 1!!!!!!!!!!!!! ", "{$data.campaignObj}" ]
+            },
+            {
+                "$class": "redis",
+                "$method": "paged",
+                "key": "{$data.campaignObj.targets}",
+                "page": "{#every.item}",
+                "pageSize": "10",
+                "$set": "data.destinations"
+            },
+            {
+                "$every": "{#data.destinations}",
+                "$tasks": [
+                    {
+                        "$function": "console.print",
+                        "$args": [ "Outbound for Phone Number: ", "{#every.item}", "{$data.campaignObj}" ]
+                    },
+                    {
+                        "$class": "message",
+                        "$method": "from_campaign",
+                        "dest": "{#every.item}",
+                        "campaign": "{$data.campaignObj}",
+                        "$set": "data.msg"
+                    },
+                    {
+                        "$class": "job",
+                        "name": "outbound-msg",
+                        "data": "{#data.msg}",
+                        "$set": "data.jobResult"
+                    },
+                    {
+                        "if": "{#data.jobResult}",
+                        "$function": "console.print",
+                        "$args": [ "Outbound Msg Job's result: ", "{#data.jobResult}"]
+                    }
+                ]
+            }
+        ]
+    }
+]

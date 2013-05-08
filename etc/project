@@ -3,7 +3,7 @@
 	"requires": [ "opxi2node/message" ],
 	"daemon": {
 		"test": {
-			"initiator": [ "couch_changes" ]
+			"initiator": [ "couch_changes", "redis_event", "worker" ]
 		},
         "main": {
             "initiator": [ "redis_event", "worker" ]
@@ -12,23 +12,21 @@
 	"initiator":{
         "worker": {
             "workflows": [{
-                "name": "flowyjob",
-                "concurrency": 2,
-                "tasks": [{
-					"$function": "console.print",
-					"$args": [ "Job Done result: ", "{$job.data}" ]
-				}, {
-                    "$class": "job",
-                    "$method": "done",
-					"job": "{$job}",
-					"done": "{$done}",
-					"message": "{$job.data.name}",
-					"$set": "data.job_done"
-                }]
+                "name": "outbound-msg",
+                "concurrency": 20,
+                "tasks": "<message/outbound.json>"
+            },{
+                "name": "campaign-run",
+                "concurrency": 10,
+                "$backdata": "result",
+                "tasks": "<campaign/run.json>"
             }]
         },
 		"redis_event": {
 			"workflows": [{
+				"pattern": "opxi2.campaign.new.*",
+				"tasks": "<campaign/process.json>"
+			},{
 				"pattern": "opxi2.df1.*",
 				"tasks": [{
 					"$function": "JSON.parse",
@@ -53,92 +51,46 @@
 					"$function": "console.print",
 					"$args": [ "Print job result: ", "{$data.document}" ]
 				}]
-			},{
-				"pattern": "opxi2.df2.*",
-				"tasks": [{
-					"$function": "JSON.parse",
-					"$args": [ "{\"hash\":{$message}}" ],
-                    "$set": "data.msg"
-				},{
-					"$class": "redis",
-					"$method": "getHash",
-                    "key": "{$message}",
-                    "$set": "data.hashObj"
-				},{
-					"$function": "console.print",
-					"$args": [ "Message result: ", "{$data.hashObj}" ]
-				}]
-			},{
-				"pattern": "opxi2.df3.*",
-				"tasks": [{
-					"$function": "JSON.parse",
-					"$args": [ "{$message}" ],
-                    "$set": "data.msg"
-				},{
-					"$every": "{$data.msg}",
-                    "$collect":"result",
-                    "$tasks":[{
-                        "$function":"console.print",
-                        "$args":["Running $every index: {#every.index},", "item: {#every.item}"]
-                    }, {
-                        "$function":"toUpperCase",
-                        "$origin":"{#every.item}",
-                        "$set":"result"
-                    }],
-                    "$set": "data.msg2"
-				},{
-					"$function": "console.print",
-					"$args": [ "Message result: ", "{$data.msg2}" ]
-				}]
 			}]
 		},
         "couch_changes":{
             "workflows":[{
-                "filter": "query/important",
-                "tasks":[{
-                    "$class": "redis",
-                    "$method": "pages",
-                    "key": "oypajdxg-campaign:targets",
-                    "pageSize": "10",
-                    "$set": "data.pages",
-                    "$empty": "data.no_results"
+                "filter": "query/important2",
+                "tasks": [{
+                    "$function": "JSON.parse",
+                    "$args": [ "{\"ok\": \"This is me!\"}" ],
+                    "$set": "data.campaignObj"
                 },{
-                    "if": "{$data.no_results}",
+                    "$class": "job",
+                    "name": "campaign-run",
+                    "data": "{$data.campaignObj}",
+                    "$set": "data.jobResult"
+                },{
+                    "if": "{$data.jobResult}",
                     "$function": "console.print",
-                    "$args": [ "Page result: ", "{$data.no_results}" ]
-                },{
-                    "$function":"Array",
-                    "$args":[
-                        ["{\"key\":\"data\"}"],
-                        ["{\"key2\":\"data2\"}"]
-                    ],
-                    "$set": "data.testArr"
-                },{
-                    "$every": "{$data.testArr}",
-                    "$collect": "result3",
-                    "$tasks":[{
-                        "$function": "console.print",
-                        "$args": [ "Dataaaa: ", "{#every.item}" ]
-                    },{
-                        "$every": "{#every.item}",
-                        "$collect": "result2",
-                        "$tasks":[{
-                            "$function": "console.print",
-                            "$args": [ "Dataaaa Inner: ", "{#every.item}" ]
-                        },{
-                            "$function": "JSON.parse",
-                            "$args": [ "{#every.item}" ],
-                            "$set": "result2"
-                        }],
-                        "$set": "result3"
-                    }],
-                    "$set": "data.result2"
-                },{
-                    "$function": "console.print",
-                    "$args":[ "Test it ", "{$data.result2}" ]
+                    "$args": [ "Job's result: ", "{$data.jobResult}"]
                 }]
             },{
-
+                "filter": "query/important",
+                "tasks": [{
+                    "$function": "JSON.parse",
+                    "$args": [ "\"This is me!\"" ],
+                    "$set": "campaignObj"
+                },{
+                    "$function": "Array",
+                    "$args": [ 1, 2 ],
+                    "$set": "pages"
+                },{
+                    "if": "{$campaignObj}",
+                    "$function": "console.print",
+                    "$args": [ "I am available: ", "{$campaignObj}"]
+                },{
+                    "$every": "{$pages}",
+                    "$tasks":[{
+                        "$function": "console.print",
+                        "$args": [ "Hah 1 !!!: ", "{$campaignObj}" ]
+                    }]
+                }]
             }]
         }
 	}

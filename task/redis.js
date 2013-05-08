@@ -45,6 +45,12 @@ util.extend( redis.prototype, {
         }) );
     },
 
+    /**
+     * Fetch a redis list with paging
+     * @key list hash name
+     * @page
+     * @pageSize
+     */
     paged: function() {
         var redis = this.createClient();
         var page = Number( this.page ) || 1;
@@ -52,6 +58,17 @@ util.extend( redis.prototype, {
         var start = (page-1)*pageSize;
         var end = start + (pageSize-1);
         redis.lrange( this.key, start, end, this.errorHandler( redis ) );
+    },
+
+    /**
+     * Get all keys in a redis hash
+     * @key redis hash name
+     * @property the field name to set
+     * @value value to set under the name @property
+     */
+    setValue: function() {
+        var redis = this.createClient();
+        redis.hset( this.key, this.property, this.value, this.errorHandler( redis ) );
     },
 
     /**
@@ -96,8 +113,7 @@ util.extend( redis.prototype, {
             if( clbk ) {
                 return clbk.bind( this )( obj );
             }
-            console.log( "33333333333333 %j", obj );
-            return this.completed( {data:obj} );
+            return this.completed( obj );
         }.bind( this );
     }
 
