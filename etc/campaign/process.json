@@ -3,19 +3,20 @@
         "$class": "redis",
         "$method": "getHash",
         "key": "{$message}",
-        "$set": "data.campaignObj"
+        "$set": "campaignHash"
     },
     {
         "$class": "message",
         "$method": "as_campaign",
-        "data": "{$data.campaignObj}",
+        "id": "{$message}",
+        "data": "{$campaignHash}",
         "$set": "campaign"
     },
     {
         "$class": "couch",
         "id": "{$campaign.id}",
         "doc": "{$campaign}",
-        "$set": "data.logResp"
+        "$set": "logResp"
     },
     {
         "$class": "message",
@@ -24,12 +25,21 @@
         "$set": "msg"
     },
     {
+        "if": "{$campaign.id}",
+        "$class": "job",
+        "name": "authorize-msg",
+        "data": "{$campaign}",
+        "$set": "auth"
+    },
+    {
+        "if": "{$auth.success}",
         "$class": "job",
         "name": "campaign-run",
         "data": "{$campaign.id}",
-        "$set": "data.jobResult"
+        "$set": "jobResult"
     },
     {
+        "if": "{$auth.success}",
         "$class": "redis",
         "$method": "setValue",
         "key": "{$message}",
@@ -37,14 +47,15 @@
         "value": "Queued"
     },
     {
+        "if": "{$auth.success}",
         "$class": "redis",
         "$method": "publish",
         "channel": "opxi2.campaign.change.{$message}",
         "message": "{$message}"
     },
     {
-        "if": "{$data.jobResult}",
+        "if": "{$jobResult}",
         "$function": "console.print",
-        "$args": [ "Campaign-Run Job's result: ", "{$data.jobResult}"]
+        "$args": [ "Campaign-Run Job's result: ", "{$jobResult}"]
     }
 ]

@@ -36,7 +36,7 @@ util.extend( msg.prototype, {
     as_campaign: function() {
         var self = this;
         var msg = new Message( this.data );
-        msg.as_campaign();
+        msg.as_campaign( this.id );
         self.completed( msg );
     },
 

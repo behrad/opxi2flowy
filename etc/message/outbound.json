@@ -1,60 +1,29 @@
 [
     {
         "$class": "uuid",
-        "$set": "data.msg_uuid"
+        "$set": "msg_uuid"
     },
     {
         "$class": "message",
-        "id": "{$data.msg_uuid}",
+        "id": "{$msg_uuid}",
         "data": "{$job.data}",
-        "$set": "_msg"
+        "$set": "msgObj"
     },
     {
         "$class": "message",
         "$method": "attach_body",
-        "message": "{$_msg}",
+        "message": "{$msgObj}",
         "$set": "msg"
     },
     {
         "$class": "couch",
-        "id": "{$data.msg_uuid}",
+        "id": "{$msg_uuid}",
         "doc": "{$msg}",
-        "$set": "data.logResp"
+        "$set": "logResp"
     },
     {
         "$function": "console.print",
-        "$args": [ "Outbound Msg Service Job: ", "{$data.logResp}" ]
-    },
-    {
-        "$class": "crm",
-        "$method": "is_authorized",
-        "user": "{$msg.from}",
-        "message": "{$msg}",
-        "$set": "data.authorization"
-    },
-    {
-        "if": "{$data.authorization.failed}",
-        "$function": "console.print",
-        "$args": [ "Authorization Failed ", "{$msg.from}" ]
-    },
-    {
-        "if": "{$data.authorization.failed}",
-        "$class": "couch",
-        "$method": "update",
-        "id": "{$data.msg_uuid}",
-        "data": "{$data.authorization.failed}"
-    },
-    {
-        "if": "{$data.authorization.success}",
-        "$function": "console.print",
-        "$args": [ "Sender Account: ", "{$data.authorization.sender}" ]
-    },
-    {
-        "if": "{$data.authorization.success}",
-        "$class": "couch",
-        "$method": "update",
-        "id": "{$data.msg_uuid}",
-        "data": "{$data.authorization.success}"
+        "$args": [ "Outbound Msg log: ", "{$logResp}" ]
     },
     {
         "$class": "job",

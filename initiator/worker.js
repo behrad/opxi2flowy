@@ -56,9 +56,9 @@ worker.prototype.listen = function( workflowConfig ) {
 
 worker.prototype.onCompleted = function( job, done ) {
     return function( wf ) {
-        var result = wf[ wf.$backdata ];
+        var result = wf.data[ wf.$backdata ];
         if ( !Workflow.isEmpty(result) ) {
-            console.log( "Completed with data! '%j', '%j', %j", result, wf.$backdata, wf );
+            console.log( "Completed with data! %j=%j", wf.$backdata, result );
             job.set( 'data' , JSON.stringify(result), done );
         } else {
             done();
@@ -68,6 +68,7 @@ worker.prototype.onCompleted = function( job, done ) {
 
 worker.prototype.onFailed = function( job, done ) {
     return function( wf ) {
+        console.log( "Failed workflow '%j'", wf );
         done( { error: 'failed', wf: wf } );
     }.bind( this );
 };

@@ -3,7 +3,7 @@
         "$class": "redis",
         "$method": "getHash",
         "key": "{$job.data}",
-        "$set": "data.campaignObj"
+        "$set": "campaignObj"
     },
     {
         "$class": "redis",
@@ -20,68 +20,103 @@
     },
     {
         "$function": "console.print",
-        "$args": [ "Process Campaign: ", "{$data.campaignObj}" ]
+        "$args": [ "Process Campaign: ", "{$campaignObj}" ]
     },
     {
         "$class": "redis",
         "$method": "pages",
-        "key": "{$data.campaignObj.targets}",
+        "key": "{$campaignObj.targets}",
         "pageSize": "10",
-        "$set": "data.pages",
-        "$empty": "data.no_results"
+        "$set": "pages",
+        "$empty": "no_results"
     },
     {
-        "if": "{$data.no_results}",
+        "if": "{$no_results}",
         "$function": "console.print",
-        "$args": [ "No Destinations!: ", "{$data.campaignObj.targets}" ]
+        "$args": [ "No Destinations!: ", "{$campaignObj.targets}" ]
     },
     {
-        "if": "{$data.campaignObj}",
-        "$function": "console.print",
-        "$args": [ "Campaign: ", "{$data.campaignObj}" ]
-    },
-    {
-        "$every": "{$data.pages}",
+        "$every": "{$pages}",
+        "$collect": "itemResult",
         "$tasks": [
             {
                 "$function": "console.print",
-                "$args": [ "Hah 1!!!!!!!!!!!!! ", "{$data.campaignObj}" ]
+                "$args": [ "Hah 1!!!!!!!!!!!!! ", "{$campaignObj}" ]
             },
             {
                 "$class": "redis",
                 "$method": "paged",
-                "key": "{$data.campaignObj.targets}",
+                "key": "{$campaignObj.targets}",
                 "page": "{#every.item}",
                 "pageSize": "10",
-                "$set": "data.destinations"
+                "$set": "destinations"
             },
             {
-                "$every": "{#data.destinations}",
+                "$every": "{#destinations}",
+                "$collect": "jobResult",
                 "$tasks": [
                     {
                         "$function": "console.print",
-                        "$args": [ "Outbound for Phone Number: ", "{#every.item}", "{$data.campaignObj}" ]
+                        "$args": [ "Outbound for Phone Number: ", "{#every.item}", "{$campaignObj}" ]
                     },
                     {
                         "$class": "message",
                         "$method": "from_campaign",
                         "dest": "{#every.item}",
-                        "campaign": "{$data.campaignObj}",
-                        "$set": "data.msg"
+                        "campaign": "{$campaignObj}",
+                        "$set": "msg"
                     },
                     {
                         "$class": "job",
                         "name": "outbound-msg",
-                        "data": "{#data.msg}",
-                        "$set": "data.jobResult"
+                        "data": "{#msg}",
+                        "$set": "jobResult"
                     },
                     {
-                        "if": "{#data.jobResult}",
+                        "if": "{#jobResult}",
                         "$function": "console.print",
-                        "$args": [ "Outbound Msg Job's result: ", "{#data.jobResult}"]
+                        "$args": [ "Outbound Msg Job's result: ", "{#jobResult}"]
+                    },
+                    {
+                        "if": "{#jobResult}",
+                        "$class": "redis",
+                        "$method": "setValue",
+                        "key": "{$campaignObj.targets_log}",
+                        "property": "{#every.item}",
+                        "value": "{#jobResult}"
+                    },
+                    {
+                        "if": "{#jobResult}",
+                        "$class": "redis",
+                        "$method": "incr",
+                        "key": "{$campaignObj.successes}",
+                        "$set": "newValue"
+                    },
+                    {
+                        "$class": "redis",
+                        "$method": "publish",
+                        "channel": "opxi2.campaign.change.{$job.data}",
+                        "message": "{$job.data}"
                     }
-                ]
+                ],
+                "$set": "itemResult"
             }
-        ]
+        ],
+        "$set": "result"
+    },
+    {
+        "if": "{$result}",
+        "$class": "redis",
+        "$method": "setValue",
+        "key": "{$job.data}",
+        "property": "status",
+        "value": "Complete"
+    },
+    {
+        "if": "{$result}",
+        "$class": "redis",
+        "$method": "publish",
+        "channel": "opxi2.campaign.change.{$job.data}",
+        "message": "{$job.data}"
     }
 ]

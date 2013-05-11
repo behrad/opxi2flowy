@@ -68,7 +68,7 @@ util.extend( redis.prototype, {
      */
     setValue: function() {
         var redis = this.createClient();
-        redis.hset( this.key, this.property, this.value, this.errorHandler( redis ) );
+        redis.hset( this.key, this.property, JSON.stringify( this.value ), this.errorHandler( redis ) );
     },
 
     /**
@@ -90,6 +90,11 @@ util.extend( redis.prototype, {
         redis.hgetall( this.key, this.errorHandler( redis ));
     },
 
+    incr: function() {
+        var redis = this.createClient();
+        redis.incr( this.key, this.errorHandler( redis ));
+    },
+
     /**
      * Publishes a message in redis
      * @channel the channel to publish to
@@ -98,15 +103,14 @@ util.extend( redis.prototype, {
      * return publish command response
      */
     publish: function() {
-        var brokerConnection = opxi2.brokerClient();
-        var resp = brokerConnection.publish( this.channel, this.message );
-        brokerConnection.end();
-        return this.completed( resp );
+        var redis = this.createClient();
+        redis.publish( this.channel, this.message, this.errorHandler( redis ) );
     },
 
     errorHandler: function( redis, clbk ) {
         return function( err, obj ) {
             redis.quit();
+            redis.end();
             if( err ) {
                 return this.failed( err );
             }

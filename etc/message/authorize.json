@@ -1,0 +1,38 @@
+[
+    {
+        "$class": "crm",
+        "$method": "is_authorized",
+        "user": "{$job.data.from}",
+        "message": "{$job.data}",
+        "$set": "auth"
+    },
+    {
+        "$function": "console.print",
+        "$args": [ "Authorize Msg: ", "{$job.data.id}" ]
+    },
+    {
+        "if": "{$auth.failed}",
+        "$function": "console.print",
+        "$args": [ "Authorization Failed ", "{$job.data.from}" ]
+    },
+    {
+        "if": "{$auth.failed}",
+        "$class": "couch",
+        "$method": "update",
+        "id": "{$job.data.id}",
+        "data": "{$auth.failed}"
+    },
+    {
+        "if": "{$auth.success}",
+        "$function": "console.print",
+        "$args": [ "Sender Account: ", "{$auth.sender}" ]
+    },
+    {
+        "if": "{$auth.success}",
+        "$class": "couch",
+        "$method": "update",
+        "id": "{$job.data.id}",
+        "data": "{$auth.success}",
+        "$set": "authLogResp"
+    }
+]

@@ -20,14 +20,16 @@ util.extend( couch.prototype, {
     run: function () {
         var self = this;
 //	    self.emit( 'warn', 'CouchDB logger got ' + self.doc );
-        if( self.doc._id || self.id ) {
-            var id = self.doc._id || self.id;
-            delete self.doc._id;
-            delete self.doc.id;
-            delete self.doc._rev;
-            opxi2.db.insert( self.doc, id, this.handleResponse.bind( self ) );
+        var newDoc = {};
+        newDoc.extend( self.doc );
+        if( newDoc._id || self.id ) {
+            var id = newDoc._id || self.id;
+            delete newDoc._id;
+            delete newDoc.id;
+            delete newDoc._rev;
+            opxi2.db.insert( newDoc, id, this.handleResponse.bind( self ) );
         } else {
-            opxi2.db.insert( self.doc, this.handleResponse.bind( self ) );
+            opxi2.db.insert( newDoc, this.handleResponse.bind( self ) );
         }
 
     },

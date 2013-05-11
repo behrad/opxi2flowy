@@ -14,12 +14,28 @@
             "workflows": [{
                 "name": "outbound-msg",
                 "concurrency": 20,
+                "$backdata": "sendJobResult",
                 "tasks": "<message/outbound.json>"
+            },{
+                "name": "authorize-msg",
+                "concurrency": 200,
+                "$backdata": "auth",
+                "tasks": "<message/authorize.json>"
             },{
                 "name": "campaign-run",
                 "concurrency": 10,
                 "$backdata": "result",
                 "tasks": "<campaign/run.json>"
+            },{
+                "name": "send-email",
+                "concurrency": 5,
+                "$backdata": "sendStatus",
+                "tasks": "<message/send-email.json>"
+            },{
+                "name": "send-sms",
+                "concurrency": 1,
+                "$backdata": "sendStatus",
+                "tasks": "<message/send-sms.json>"
             }]
         },
 		"redis_event": {
@@ -73,23 +89,27 @@
             },{
                 "filter": "query/important",
                 "tasks": [{
-                    "$function": "JSON.parse",
-                    "$args": [ "\"This is me!\"" ],
-                    "$set": "campaignObj"
+                    "$function":"Math.random",
+                    "$args":[],
+                    "$set":"randi"
                 },{
-                    "$function": "Array",
-                    "$args": [ 1, 2 ],
-                    "$set": "pages"
+                    "$function":"Math.floor",
+                    "$args":[ "{$randi}"],
+                    "$set":"rand"
                 },{
-                    "if": "{$campaignObj}",
-                    "$function": "console.print",
-                    "$args": [ "I am available: ", "{$campaignObj}"]
+                    "$function":"console.print",
+                    "$args":[ "Salaaaam ", "{$randi}" ]
                 },{
-                    "$every": "{$pages}",
-                    "$tasks":[{
-                        "$function": "console.print",
-                        "$args": [ "Hah 1 !!!: ", "{$campaignObj}" ]
-                    }]
+                    "$class": "redis",
+                    "$method": "setValue",
+                    "key": "vbtmlydu-campaign",
+                    "property": "status",
+                    "value": "SASASASASAS"
+                },{
+                    "$class": "redis",
+                    "$method": "publish",
+                    "message": "vbtmlydu-campaign",
+                    "channel": "opxi2.campaign.change.vbtmlydu-campaign"
                 }]
             }]
         }
