@@ -39,34 +39,39 @@ util.extend( job.prototype, {
         my_job.priority( self.$priority || job.defaultConfig.$priority )
             .attempts( self.$retires || job.defaultConfig.$retires )
             .save();
-        my_job.on( 'complete', function() {
-            my_job.get( 'data', function(error, result) {
-                if (error) {
-                    self.emit( 'error', 'No job complete data: ' + error );
-                }
-                self.completed( result );
+        if( self.blocking ) {
+            my_job.on( 'complete', function() {
+                my_job.get( 'data', function(error, result) {
+                    if (error) {
+                        self.emit( 'error', 'No job complete data: ' + error );
+                        return self.failed( error );
+                    }
+                    return self.completed( result );
+                });
+            }).on( 'failed', function() {
+                self.failed( 'Job ' + my_job.id + ' Error' );
+            }).on('progress', function( progress ){
             });
-//            self.completed( result ); //TODO ???
-        }).on( 'failed', function() {
-            self.failed( 'Job ' + my_job.id + ' Error' );
-        }).on('progress', function( progress ){
-        });
+        } else {
+            self.completed( my_job );
+        }
         if( self.$delay && !isNaN( self.$delay ) ) {
             opxi2.taskq.promote();
         }
-    }
+    },
 
     /**
      * Mark a Kue Job as done
      * @job the job object
      * @done Kue done callback
+     * @message
      *
      * (@see worker initiators)
      */
-    /*done: function () {
+    done: function () {
         var self = this;
-        self.job.set( 'data' , JSON.stringify( { ok: true, message: self.message + ' is done4!' } ), self.done );
-        self.completed( { ok: true, message: self.message + ' is done4!' } );
-    }*/
+        self.job.set( 'data' , JSON.stringify( self.message ), self.done );
+        self.completed( self.message );
+    }
 
 });

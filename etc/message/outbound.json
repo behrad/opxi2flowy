@@ -23,17 +23,35 @@
     },
     {
         "$function": "console.print",
-        "$args": [ "Outbound Msg log: ", "{$logResp}" ]
+        "$args": [ "Outbound Msg Request: ", "{$logResp}" ]
     },
     {
         "$class": "job",
         "name": "send-{$msg.channel}",
+        "blocking": true,
         "data": "{$msg}",
-        "$set": "sendJobResult"
+        "$set": "msg_send_response"
     },
     {
-        "if": "{$sendJobResult}",
-        "$function": "console.print",
-        "$args": [ "Send Service job's result: ", "{$sendJobResult}"]
+        "if": "{$msg_send_response}",
+        "$class": "message",
+        "$method": "as_log",
+        "action": "sending",
+        "log": "{$msg_send_response}",
+        "$set": "logJson"
+    },
+    {
+        "if": "{$logJson}",
+        "$class": "couch",
+        "$method": "update",
+        "id": "{$msg_uuid}",
+        "data": "{$logJson}"
+    },
+    {
+        "if": "{$msg_send_response}",
+        "$class": "redis",
+        "$method": "publish",
+        "channel": "opxi2.outbound.sent.{$msg_uuid}",
+        "message": "{$msg}"
     }
 ]

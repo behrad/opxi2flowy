@@ -15,6 +15,10 @@ util.extend( redis.prototype, {
         this.failed( "Not Implemented!" );
     },
 
+    test: function() {
+        var self = this;
+    },
+
     createClient: function() {
         var self = this;
         var redis = opxi2.brokerClient();
@@ -105,6 +109,44 @@ util.extend( redis.prototype, {
     publish: function() {
         var redis = this.createClient();
         redis.publish( this.channel, this.message, this.errorHandler( redis ) );
+    },
+
+    /**
+     * Wait for the next message available on the pattern
+     *
+     * @pattern the pattern to subscribe to
+     *
+     * The returned event will have to properties
+     * @channel the channel the event is received on
+     * @message the published event message
+     */
+    wait_for: function() {
+        var self = this;
+        var redis = this.createClient();
+        redis.on( "pmessage", function ( pattern, channel, message ) {
+            self.completed( {message: message, channel: channel} );
+            redis.punsubscribe( self.pattern );
+            redis.quit();
+            redis.end();
+            if( timer ) {
+                clearTimeout( timer );
+            }
+        });
+        redis.on("psubscribe", function (pattern, count) {
+            console.log( "Task wait for next message on %s ", pattern );
+        });
+        redis.on("punsubscribe", function (pattern, count) {
+            console.log( "Task unSubscribed to %s, remaining subs: %s", pattern, count );
+        });
+        redis.psubscribe( self.pattern );
+        if( self.timeout ) {
+            var timer = setTimeout( function(){
+                self.completed( { timeout: true } );
+                redis.punsubscribe( self.pattern );
+                redis.quit();
+                redis.end();
+            }, Number( self.timeout ) );
+        }
     },
 
     errorHandler: function( redis, clbk ) {

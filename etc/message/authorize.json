@@ -7,10 +7,6 @@
         "$set": "auth"
     },
     {
-        "$function": "console.print",
-        "$args": [ "Authorize Msg: ", "{$job.data.id}" ]
-    },
-    {
         "if": "{$auth.failed}",
         "$function": "console.print",
         "$args": [ "Authorization Failed ", "{$job.data.from}" ]
@@ -24,15 +20,9 @@
     },
     {
         "if": "{$auth.success}",
-        "$function": "console.print",
-        "$args": [ "Sender Account: ", "{$auth.sender}" ]
-    },
-    {
-        "if": "{$auth.success}",
         "$class": "couch",
         "$method": "update",
         "id": "{$job.data.id}",
-        "data": "{$auth.success}",
-        "$set": "authLogResp"
+        "data": "{$auth.success}"
     }
 ]

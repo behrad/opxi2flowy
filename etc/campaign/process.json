@@ -19,14 +19,9 @@
         "$set": "logResp"
     },
     {
-        "$class": "message",
-        "$method": "attach_body",
-        "message": "{$campaign}",
-        "$set": "msg"
-    },
-    {
         "if": "{$campaign.id}",
         "$class": "job",
+        "blocking": true,
         "name": "authorize-msg",
         "data": "{$campaign}",
         "$set": "auth"
@@ -36,7 +31,7 @@
         "$class": "job",
         "name": "campaign-run",
         "data": "{$campaign.id}",
-        "$set": "jobResult"
+        "$set": "campaign_job"
     },
     {
         "if": "{$auth.success}",
@@ -54,8 +49,8 @@
         "message": "{$message}"
     },
     {
-        "if": "{$jobResult}",
+        "if": "{$campaign_job}",
         "$function": "console.print",
-        "$args": [ "Campaign-Run Job's result: ", "{$jobResult}"]
+        "$args": [ "Campaign-Run Job: ", "{$campaign_job}"]
     }
 ]

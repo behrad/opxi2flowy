@@ -44,16 +44,10 @@ util.extend( msg.prototype, {
         var self = this;
         var msg = new Message( this.dest, this.campaign );
         self.completed( msg );
+    },
 
-        /*uuid.get_uuid( function( id ) {
-            msgData.id = id;
-            try {
-
-            } catch( e ) {
-                console.error( e );
-                self.failed( {error: e } );
-            }
-        });*/
+    as_log: function() {
+        this.completed( new Message().as_log( this.action, this.log ) );
     },
 
     /**

@@ -14,7 +14,7 @@
             "workflows": [{
                 "name": "outbound-msg",
                 "concurrency": 20,
-                "$backdata": "sendJobResult",
+                "$backdata": "msg_send_response",
                 "tasks": "<message/outbound.json>"
             },{
                 "name": "authorize-msg",
@@ -24,7 +24,7 @@
             },{
                 "name": "campaign-run",
                 "concurrency": 10,
-                "$backdata": "result",
+                "$backdata": "campaign_result",
                 "tasks": "<campaign/run.json>"
             },{
                 "name": "send-email",
@@ -93,23 +93,15 @@
                     "$args":[],
                     "$set":"randi"
                 },{
-                    "$function":"Math.floor",
-                    "$args":[ "{$randi}"],
-                    "$set":"rand"
+                    "$class": "moment",
+                    "$method": "diff",
+                    "from": "",
+                    "lt": 3,
+                    "unit": "days",
+                    "$set": "later"
                 },{
                     "$function":"console.print",
-                    "$args":[ "Salaaaam ", "{$randi}" ]
-                },{
-                    "$class": "redis",
-                    "$method": "setValue",
-                    "key": "vbtmlydu-campaign",
-                    "property": "status",
-                    "value": "SASASASASAS"
-                },{
-                    "$class": "redis",
-                    "$method": "publish",
-                    "message": "vbtmlydu-campaign",
-                    "channel": "opxi2.campaign.change.vbtmlydu-campaign"
+                    "$args":[ "Result ", "{$later}" ]
                 }]
             }]
         }

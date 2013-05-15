@@ -26,7 +26,7 @@
         "$class": "redis",
         "$method": "pages",
         "key": "{$campaignObj.targets}",
-        "pageSize": "10",
+        "pageSize": "100",
         "$set": "pages",
         "$empty": "no_results"
     },
@@ -37,27 +37,23 @@
     },
     {
         "$every": "{$pages}",
-        "$collect": "itemResult",
+        "$collect": "outbound_jobs",
         "$tasks": [
-            {
-                "$function": "console.print",
-                "$args": [ "Hah 1!!!!!!!!!!!!! ", "{$campaignObj}" ]
-            },
             {
                 "$class": "redis",
                 "$method": "paged",
                 "key": "{$campaignObj.targets}",
                 "page": "{#every.item}",
-                "pageSize": "10",
+                "pageSize": "100",
                 "$set": "destinations"
             },
             {
                 "$every": "{#destinations}",
-                "$collect": "jobResult",
+                "$collect": "outbound_job",
                 "$tasks": [
                     {
                         "$function": "console.print",
-                        "$args": [ "Outbound for Phone Number: ", "{#every.item}", "{$campaignObj}" ]
+                        "$args": [ "Outbound Request to: ", "{#every.item}" ]
                     },
                     {
                         "$class": "message",
@@ -70,23 +66,23 @@
                         "$class": "job",
                         "name": "outbound-msg",
                         "data": "{#msg}",
-                        "$set": "jobResult"
+                        "$set": "outbound_job"
                     },
+
+
+
+
+
                     {
-                        "if": "{#jobResult}",
-                        "$function": "console.print",
-                        "$args": [ "Outbound Msg Job's result: ", "{#jobResult}"]
-                    },
-                    {
-                        "if": "{#jobResult}",
+                        "if": "{#outbound_msg_result}",
                         "$class": "redis",
                         "$method": "setValue",
                         "key": "{$campaignObj.targets_log}",
                         "property": "{#every.item}",
-                        "value": "{#jobResult}"
+                        "value": "{#outbound_msg_result}"
                     },
                     {
-                        "if": "{#jobResult}",
+                        "if": "{#outbound_msg_result}",
                         "$class": "redis",
                         "$method": "incr",
                         "key": "{$campaignObj.successes}",
@@ -98,14 +94,21 @@
                         "channel": "opxi2.campaign.change.{$job.data}",
                         "message": "{$job.data}"
                     }
+
+
+
+
+
+
+
                 ],
-                "$set": "itemResult"
+                "$set": "outbound_jobs"
             }
         ],
-        "$set": "result"
+        "$set": "campaign_result"
     },
     {
-        "if": "{$result}",
+        "if": "{$campaign_result}",
         "$class": "redis",
         "$method": "setValue",
         "key": "{$job.data}",
@@ -113,7 +116,7 @@
         "value": "Complete"
     },
     {
-        "if": "{$result}",
+        "if": "{$campaign_result}",
         "$class": "redis",
         "$method": "publish",
         "channel": "opxi2.campaign.change.{$job.data}",
