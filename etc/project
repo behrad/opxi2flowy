@@ -36,6 +36,23 @@
                 "concurrency": 1,
                 "$backdata": "sendStatus",
                 "tasks": "<message/send-sms.json>"
+            },{
+                "name": "pauseable",
+                "concurrency": 1,
+                "$backdata": "testresult",
+                "tasks": [{
+                    "$class": "sleep",
+                    "amount": 5000,
+                    "$set": "next"
+                },{
+                    "if": "{$next}",
+                    "$function": "JSON.parse",
+                    "$args": "{\"finished\": true }",
+                    "$set": "testresult"
+                },{
+                    "$function": "console.print",
+					"$args": [ "New message: ", "{$testresult}" ]
+                }]
             }]
         },
 		"redis_event": {
@@ -93,15 +110,14 @@
                     "$args":[],
                     "$set":"randi"
                 },{
-                    "$class": "moment",
-                    "$method": "diff",
-                    "from": "",
-                    "lt": 3,
-                    "unit": "days",
-                    "$set": "later"
+                    "$class": "job",
+                    "name": "pauseable",
+                    "delay": 5000,
+                    "blocking": true,
+                    "$set": "finished"
                 },{
                     "$function":"console.print",
-                    "$args":[ "Result ", "{$later}" ]
+                    "$args":[ "Result ", "{$finished}" ]
                 }]
             }]
         }

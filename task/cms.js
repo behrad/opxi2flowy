@@ -19,6 +19,22 @@ util.extend( cmsTask.prototype, {
         });
     },
 
+//    TODO http://192.168.254.113:8000/api/atm/event
+//{
+//  "atm_id": "BBB Salam2",
+//  "failure_time": "2013/5/18 11:24:13",
+//  "data": { "d_id": "1324", "desc":"خرابی جدید" }
+//}
+
+//    this.apiCall( {
+//                module: 'atm',
+//                method: 'failure',
+//                data: {}
+//            }, finalClbk );
+
+//  TODO  Branch of ATM: api/atm/branch?atm=bbb_salam2
+
+
     get: function () {
         var self = this;
         cms.get( this.id, function( err, data ){
