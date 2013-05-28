@@ -44,24 +44,57 @@ redis_event.prototype.ready = function () {
  *
  */
 redis_event.prototype.listen = function( workflowConfig ) {
-    var broker = opxi2.brokerClient();
-    broker.on( "pmessage", function ( pattern, channel, message ) {
-        var wf = new Workflow(
-            util.extend (true, {}, workflowConfig ), {
-                pattern: pattern,
-                channel: channel,
-                message: message
-        });
-    //	wf.data.channel = channel;
-    //	wf.data.pattern = pattern;
-    //	wf.data.message = message;
-        wf.run();
+    var self = this;
+    this.do_subscribe( workflowConfig.pattern, {
+        on_message: function ( pattern, channel, message ) {
+            var wf = new Workflow(
+                util.extend (true, {}, workflowConfig ), {
+                    pattern: pattern,
+                    channel: channel,
+                    message: message
+            });
+            //	wf.data.channel = channel;
+            //	wf.data.pattern = pattern;
+            //	wf.data.message = message;
+            wf.run();
+            if( workflowConfig.cancelable ) {
+                var cancel_subscription = self.do_subscribe( 'cancel.' + channel /*+ '_' + message*/, {
+                    on_message: self.createCancelable( wf )
+                });
+                wf.on( 'failed', function( wf ){
+                    cancel_subscription.punsubscribe();
+                    cancel_subscription.end();
+                });
+                wf.on( 'completed', function( wf ){
+                    cancel_subscription.punsubscribe();
+                    cancel_subscription.end();
+                });
+            }
+        },
+        on_subscribe: function (pattern, count) {
+            console.log( "Waiting for new messages on %s ", pattern );
+        },
+        on_unsubscribe: function (pattern, count) {
+            console.log( "UnSubscribed to %s, %s", pattern, count );
+        }
     });
-    broker.on("psubscribe", function (pattern, count) {
-        console.log( "Waiting for new messages on %s ", pattern );
-    });
-    broker.on("punsubscribe", function (pattern, count) {
-        console.log( "UnSubscribed to %s, %s", pattern, count );
-    });
-    broker.psubscribe( workflowConfig.pattern );
 };
+
+redis_event.prototype.createCancelable = function( workflow, sub ) {
+    return function( pattern, channel, message ) {
+        workflow.tasks.forEach( function(task){
+            task.cancel();
+        });
+    };
+};
+
+redis_event.prototype.do_subscribe = function( pattern, params ) {
+    var broker = opxi2.brokerClient();
+    broker.on( "pmessage", params.on_message || this.noop );
+    broker.on( "psubscribe", params.on_subscribe || this.noop );
+    broker.on( "punsubscribe", params.on_unsubscribe || this.noop );
+    broker.psubscribe( pattern );
+    return broker;
+};
+
+redis_event.prototype.noop = function(){};

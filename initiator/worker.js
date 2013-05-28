@@ -22,6 +22,7 @@ util.inherits( worker, EventEmitter );
 
 worker.prototype.ready = function () {
 	var self = this;
+    self.workflow_job_map = [];
 	self.config.workflows.forEach( function ( cfg ) {
 		self.listen( cfg );
 	});
@@ -41,7 +42,7 @@ worker.prototype.ready = function () {
 worker.prototype.listen = function( workflowConfig ) {
     var self = this;
     opxi2.taskq.process( workflowConfig.name, workflowConfig.concurrency, function (job, done) {
-        console.log("Receive job %s %j", workflowConfig.name, job.data );
+        console.log("Receive job(%s): %s=%j", job.id, workflowConfig.name, job.data );
         var wf = new Workflow(
             util.extend (true, {}, workflowConfig ), {
                 job: job
@@ -51,6 +52,30 @@ worker.prototype.listen = function( workflowConfig ) {
         wf.on( 'completed', self.onCompleted(job,done).bind( self ) );
         wf.on( 'failed', self.onFailed(job,done).bind( self ) );
         wf.run();
+        self.workflow_job_map[ job.id ] = wf;
+    });
+    if( workflowConfig.cancelable ) {
+        self.process_cancels( workflowConfig );
+    }
+
+};
+
+worker.prototype.process_cancels = function( config ) {
+    var self = this;
+    opxi2.taskq.process( 'cancel-' + config.name, config.concurrency, function (job, done) {
+        if( !job.data.job_id ) {
+            return done( {error: true, message: "No job_id specified." } );
+        }
+        var wf = self.workflow_job_map[ job.data.job_id ];
+        if( wf ) {
+            console.log("Canceling workflow %s ", wf.id );
+            wf.tasks.forEach( function( task ){
+                task.cancel();
+            });
+            done();
+        } else {
+            done( {error: true, message: "No workflow available for " + job.data.job_id } );
+        }
     });
 };
 
@@ -58,7 +83,7 @@ worker.prototype.onCompleted = function( job, done ) {
     return function( wf ) {
         var result = wf.data[ wf.$backdata ];
         if ( !Workflow.isEmpty(result) ) {
-            console.log( "Completed with data! %j=%j", wf.$backdata, result );
+            console.log( "Worker completed with data %j=%j", wf.$backdata, result );
             job.set( 'data' , JSON.stringify(result), done );
         } else {
             done();
@@ -69,6 +94,6 @@ worker.prototype.onCompleted = function( job, done ) {
 worker.prototype.onFailed = function( job, done ) {
     return function( wf ) {
         console.log( "Failed workflow '%j'", wf );
-        done( { error: 'failed', wf: wf } );
+        done( { error: true, message: 'failed', wf: wf } );
     }.bind( this );
 };
