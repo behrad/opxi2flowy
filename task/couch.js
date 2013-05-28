@@ -41,10 +41,7 @@ util.extend( couch.prototype, {
      */
     update: function() {
         var self = this;
-        var updateHandlerName = self.handler || 'log/msgLog';
-        var tokens = updateHandlerName.split( '/' );
-        opxi2.db.atomic( tokens[0], tokens[1], self.id, self.data, self.handleResponse.bind( this ) );
-//        opxi2.db.updateLog( updateHandlerName, self.id, self.data, self.handleResponse.bind( this ) );
+        opxi2.db.updateLog( self.handler, self.id, self.data, self.handleResponse.bind( this ) );
     },
 
     /**
@@ -59,6 +56,17 @@ util.extend( couch.prototype, {
                 self.completed( doc );
             }
         });
+    },
+
+    attach_body: function( id, rev, attachment, clbk ) {
+        opxi2.db.attachment.insert(id, attachment.name, attachment.data, attachment.content_type, {rev: rev}, function( err, body ) {
+            if (err) {
+                clbk && clbk(err);
+                return console.log( err );
+            }
+            clbk && clbk();
+        });
+
     },
 
     handleResponse: function( err, resp ) {
