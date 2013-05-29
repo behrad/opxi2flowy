@@ -1,0 +1,6 @@
+[
+    {
+        "$function": "console.print",
+        "$args": [ "Call Answered: ", "{$job.data}" ]
+    }
+]

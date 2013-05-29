@@ -1,0 +1,32 @@
+[
+    {
+        "$class": "message",
+        "$method": "as_log",
+        "action": "delivery-report",
+        "data": "{$job.data}",
+        "$set": "delivery_log"
+    },
+    {
+        "if": "{$delivery_log}",
+        "$class": "couch",
+        "$method": "update",
+        "id": "{$job.data.id}",
+        "data": "{$delivery_log}"
+    },
+    {
+        "$class": "message",
+        "$method": "is_delivered",
+        "data": "{$job.data}",
+        "$set": "delivered"
+    },{
+        "$function":"toLowerCase",
+        "$origin":"{$job.data.status}",
+        "$set":"status"
+    },{
+        "if": "{$delivered}",
+        "$class": "redis",
+        "$method": "publish",
+        "channel": "opxi2.outbound.sms.delivery.{$job.data.id}.{$status}",
+        "message": "{$job.data.id}"
+    }
+]
