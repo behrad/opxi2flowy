@@ -43,6 +43,8 @@ worker.prototype.listen = function( workflowConfig ) {
     var self = this;
     opxi2.taskq.process( workflowConfig.name, workflowConfig.concurrency, function (job, done) {
         console.log("Receive job(%s): %s=%j", job.id, workflowConfig.name, job.data );
+        job.last_attempt = (Number(job._attempts) + 1) == Number(job._max_attempts);
+        job.current_attempt = job._attempts;
         var wf = new Workflow(
             util.extend (true, {}, workflowConfig ), {
                 job: job
@@ -81,19 +83,41 @@ worker.prototype.process_cancels = function( config ) {
 
 worker.prototype.onCompleted = function( job, done ) {
     return function( wf ) {
-        var result = wf.data[ wf.$backdata ];
-        if ( !Workflow.isEmpty(result) ) {
+        if( wf.$backdata ) {
+            var result = this.getProperty( wf.data, wf.$backdata );
             console.log( "Worker completed with data %j=%j", wf.$backdata, result );
-            job.set( 'data' , JSON.stringify(result), done );
+            var check = result, checkName = wf.$backdata;
+            if( wf.$failcheck ) {
+                check = this.getProperty( wf.data, wf.$failcheck );
+                checkName = wf.$failcheck;
+            }
+            if ( !Workflow.isEmpty(check) ) {
+                job.set( 'data' , JSON.stringify(result), done );
+            } else {
+                job.set( 'data' , JSON.stringify(result), function(){
+                    done( { error: true, message: 'Job back data failed for '+checkName, flowId: wf.id } );
+                });
+
+            }
         } else {
-            done();
+            job.set( 'data' , JSON.stringify({job_id: job.id}), done );
         }
+
     }.bind( this );
 };
 
 worker.prototype.onFailed = function( job, done ) {
     return function( wf ) {
         console.log( "Failed workflow '%j'", wf );
-        done( { error: true, message: 'failed', wf: wf } );
+        done( { error: true, message: 'flow failed', flowId: wf.id } );
     }.bind( this );
+};
+
+worker.prototype.getProperty = function (obj, path) {
+        var val = obj;
+        var hasProp = path.split('.').every(function (prop) {
+                val = val[prop];
+                return null != val;
+        });
+        return hasProp ? val : undefined;
 };
