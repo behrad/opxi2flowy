@@ -1,0 +1,41 @@
+[
+    {
+        "$class": "message",
+        "$method": "as_multi_dest",
+        "data": "{$job.data}",
+        "index": "{$job.current_attempt}",
+        "$set": "msg"
+    },
+    {
+        "$class": "job",
+        "name": "outbound-msg",
+        "data": "{$msg}",
+        "$set": "outbound_job_id"
+    },
+    {
+        "$class": "message",
+        "$method": "delivery_pattern",
+        "channel": "{$msg.channel}",
+        "$set": "delivery_pattern"
+    },
+    {
+        "if": "{$outbound_job_id}",
+        "$class": "redis",
+        "$method": "wait_for",
+        "pattern": "{$delivery_pattern}",
+        "timeout": "{$job.data.answer_timeout}",
+        "$set": "dest_response"
+    },
+    {
+        "if": "{$dest_response.timeout}",
+        "$function": "Boolean",
+        "$args": [false],
+        "$set": "answered"
+    },
+    {
+        "if": "{$dest_response.message}",
+        "$function": "Boolean",
+        "$args": [true],
+        "$set": "answered"
+    }
+]

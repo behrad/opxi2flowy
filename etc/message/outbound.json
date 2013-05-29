@@ -1,57 +1,56 @@
 [
     {
         "$class": "uuid",
-        "$set": "msg_uuid"
+        "$set": "uuid"
     },
     {
         "$class": "message",
-        "id": "{$msg_uuid}",
+        "id": "{$uuid}",
+        "outbound": true,
         "data": "{$job.data}",
         "$set": "msgObj"
     },
     {
-        "$class": "message",
-        "$method": "attach_body",
-        "message": "{$msgObj}",
-        "$set": "msg"
-    },
-    {
         "$class": "couch",
-        "id": "{$msg_uuid}",
-        "doc": "{$msg}",
-        "$set": "logResp"
+        "doc": "{$msgObj}",
+        "$set": "msg_log"
     },
     {
         "$function": "console.print",
-        "$args": [ "Outbound Msg Request: ", "{$logResp}" ]
+        "$args": [ "Msg log: ", "{$msg_log}" ]
+    },
+    {
+        "if": "{$msg_log}",
+        "$class": "message",
+        "$method": "attach_body",
+        "message": "{$msgObj}",
+        "$set": "attached_msg_ready"
+    },
+    {
+        "if": "{$attached_msg_ready}",
+        "$class": "couch",
+        "$method": "get",
+        "id": "{$uuid}",
+        "$set": "msg"
     },
     {
         "$class": "job",
         "name": "send-{$msg.channel}",
-        "blocking": true,
         "data": "{$msg}",
-        "$set": "msg_send_response"
+        "$set": "send_job"
     },
     {
-        "if": "{$msg_send_response}",
         "$class": "message",
         "$method": "as_log",
-        "action": "sending",
-        "log": "{$msg_send_response}",
+        "action": "send_job",
+        "data": "{$send_job}",
         "$set": "logJson"
     },
     {
         "if": "{$logJson}",
         "$class": "couch",
         "$method": "update",
-        "id": "{$msg_uuid}",
+        "id": "{$uuid}",
         "data": "{$logJson}"
-    },
-    {
-        "if": "{$msg_send_response}",
-        "$class": "redis",
-        "$method": "publish",
-        "channel": "opxi2.outbound.sent.{$msg_uuid}",
-        "message": "{$msg}"
     }
 ]
