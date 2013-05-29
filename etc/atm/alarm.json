@@ -1,0 +1,73 @@
+[
+    {
+        "$class": "atm_event",
+        "$method": "branchOf",
+        "atm_name": "{$job.data.atm_id}",
+        "$set": "branch"
+    },
+    {
+        "$class": "crm",
+        "$method": "cells",
+        "sort_by": "customfields.alarm_priority",
+        "query": "org_unit",
+        "value": "{$branch.id}",
+        "$set": "branch_cells",
+        "$empty": "no_contacts"
+    },
+    {
+        "if": "{$no_contacts}",
+        "$function": "console.print",
+        "$args": ["No Contacts Found for branch ","{$branch.id}"]
+    },
+    {
+        "if": "{$branch_cells}",
+        "$class": "crm",
+        "$method": "event_matches",
+        "label": "worktime",
+        "$set": "in_work_time",
+        "$empty": "off_time"
+    },
+    {
+        "if": "{$off_time}",
+        "$class": "crm",
+        "$method": "homes",
+        "sort_by": "customfields.alarm_priority",
+        "query": "org_unit",
+        "value": "{$branch.id}",
+        "$set": "branch_phones"
+    },
+    {
+        "if": "{$in_work_time}",
+        "$class": "crm",
+        "$method": "phones",
+        "sort_by": "customfields.alarm_priority",
+        "query": "org_unit",
+        "value": "{$branch.id}",
+        "$set": "branch_phones"
+    },
+    {
+        "if": "{$branch_phones}",
+        "$function": "Array.prototype.concat",
+        "$args": [ "{$branch_cells}", "{$branch_phones}" ],
+        "$set": "branch_contacts"
+    },
+    {
+        "if": "{$branch_contacts}",
+        "$class": "message",
+        "$method": "multi_dest_msg",
+        "media_url": "{$job.data.alarm_media_url}",
+        "destinations": "{$branch_contacts}",
+        "answer_timeout": 30,
+        "$set": "multi_msg_alarm"
+    },
+    {
+        "$class": "job",
+        "name": "outbound-notify-first",
+        "blocking": true,
+        "ignore_on_fail": true,
+        "$retires": "{$branch_contacts.length}",
+        "$priority": "high",
+        "data": "{$multi_msg_alarm}",
+        "$set": "alarm_answered"
+    }
+]

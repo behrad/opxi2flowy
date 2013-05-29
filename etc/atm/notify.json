@@ -1,0 +1,30 @@
+[
+    {
+        "$class": "job",
+        "name": "atm_failure_alarm",
+        "blocking": true,
+        "data": "{$job.data}",
+        "$set": "alarm_answered",
+        "$empty": "alarm_failed"
+    },
+    {
+        "if": "{$alarm_answered}",
+        "$class": "wait",
+        "secs": "{$job.data.alarm.between_try_delay}",
+        "$set": "ready_next_notify"
+    },
+    {
+        "if": "{$alarm_failed}",
+        "$class": "wait",
+        "secs": 0,
+        "$set": "ready_next_notify"
+    },
+    {
+        "if": "{$ready_next_notify}",
+        "$class": "atm_event",
+        "$method": "check",
+        "eventId": "{$job.data.id}",
+        "$set": "failure_fixed",
+        "$empty": "failure_not_fixed"
+    }
+]

@@ -1,0 +1,7 @@
+[
+    {
+        "$class": "job",
+        "name": "cancel-outbound-notify-first",
+        "data": "{$message}"
+    }
+]
