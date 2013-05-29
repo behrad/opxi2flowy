@@ -1,0 +1,29 @@
+[
+    {
+        "$class": "redis",
+        "$method": "getHash",
+        "key": "{$message}",
+        "$set": "campaignHash"
+    },
+    {
+        "if": "{$campaignHash.job_id}",
+        "$class": "job",
+        "name": "cancel-campaign-run",
+        "data": "{$campaignHash}"
+    },
+    {
+        "if": "{$campaignHash.job_id}",
+        "$class": "redis",
+        "$method": "setValue",
+        "key": "{$message}",
+        "property": "status",
+        "value": "Canceled"
+    },
+    {
+        "if": "{$campaignHash.job_id}",
+        "$class": "redis",
+        "$method": "publish",
+        "channel": "opxi2.campaign.change.{$message}",
+        "message": "{$message}"
+    }
+]

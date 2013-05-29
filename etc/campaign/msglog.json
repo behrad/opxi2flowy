@@ -1,0 +1,47 @@
+[
+    {
+        "$class": "couch",
+        "$method": "get",
+        "id": "{$message}",
+        "$set": "msglog"
+    },
+    {
+        "if": "{$msglog.campaign_id}",
+        "$class": "redis",
+        "$method": "getHash",
+        "key": "{$msglog.campaign_id}",
+        "$set": "campaignHash"
+    },
+    {
+        "$class": "message",
+        "$method": "as_campaign",
+        "id": "{$msglog.campaign_id}",
+        "data": "{$campaignHash}",
+        "$set": "campaign"
+    },
+    {
+        "$function":"match",
+        "$origin":"{$channel}",
+        "$args": [ "[^.]+[^.]$" ],
+        "$set": "matched"
+    },{
+        "if": "{$matched}",
+        "$function":"shift",
+        "$origin":"{$matched}",
+        "$set": "status"
+    },
+    {
+        "if": "{$campaign}",
+        "$class": "redis",
+        "$method": "setValue",
+        "key": "{$campaign.targets_log}",
+        "property": "{$msglog.to}",
+        "value": "{$status}"
+    },
+    {
+        "$class": "redis",
+        "$method": "publish",
+        "channel": "opxi2.campaign.change.{$msglog.campaign_id}",
+        "message": "{$msglog.campaign_id}"
+    }
+]
