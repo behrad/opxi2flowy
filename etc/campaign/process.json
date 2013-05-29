@@ -31,7 +31,15 @@
         "$class": "job",
         "name": "campaign-run",
         "data": "{$campaign.id}",
-        "$set": "campaign_job"
+        "$set": "job_id"
+    },
+    {
+        "if": "{$job_id}",
+        "$class": "redis",
+        "$method": "setValue",
+        "key": "{$message}",
+        "property": "job_id",
+        "value": "{$job_id}"
     },
     {
         "if": "{$auth.success}",
@@ -49,8 +57,8 @@
         "message": "{$message}"
     },
     {
-        "if": "{$campaign_job}",
+        "if": "{$job_id}",
         "$function": "console.print",
-        "$args": [ "Campaign-Run Job: ", "{$campaign_job}"]
+        "$args": [ "Campaign-Run Job: ", "{$job_id}"]
     }
 ]

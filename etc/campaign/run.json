@@ -3,7 +3,7 @@
         "$class": "redis",
         "$method": "getHash",
         "key": "{$job.data}",
-        "$set": "campaignObj"
+        "$set": "campaign"
     },
     {
         "$class": "redis",
@@ -19,13 +19,14 @@
         "message": "{$job.data}"
     },
     {
+        "if": "{$campaign}",
         "$function": "console.print",
-        "$args": [ "Process Campaign: ", "{$campaignObj}" ]
+        "$args": [ "Process Campaign: ", "{$campaign}" ]
     },
     {
         "$class": "redis",
         "$method": "pages",
-        "key": "{$campaignObj.targets}",
+        "key": "{$campaign.targets}",
         "pageSize": "100",
         "$set": "pages",
         "$empty": "no_results"
@@ -33,82 +34,53 @@
     {
         "if": "{$no_results}",
         "$function": "console.print",
-        "$args": [ "No Destinations!: ", "{$campaignObj.targets}" ]
+        "$args": [ "No Destinations!: ", "{$campaign.targets}" ]
     },
     {
         "$every": "{$pages}",
-        "$collect": "outbound_jobs",
+        "$collect": "outbound_job_ids",
         "$tasks": [
             {
                 "$class": "redis",
                 "$method": "paged",
-                "key": "{$campaignObj.targets}",
-                "page": "{#every.item}",
+                "key": "{*campaign.targets}",
+                "page": "[*every.item]",
                 "pageSize": "100",
                 "$set": "destinations"
             },
             {
-                "$every": "{#destinations}",
-                "$collect": "outbound_job",
+                "$every": "[*destinations]",
+                "$collect": "outbound_job_id",
                 "$tasks": [
-                    {
-                        "$function": "console.print",
-                        "$args": [ "Outbound Request to: ", "{#every.item}" ]
-                    },
                     {
                         "$class": "message",
                         "$method": "from_campaign",
-                        "dest": "{#every.item}",
-                        "campaign": "{$campaignObj}",
+                        "dest": "[*every.item]",
+                        "campaign": "{*campaign}",
                         "$set": "msg"
                     },
                     {
                         "$class": "job",
                         "name": "outbound-msg",
-                        "data": "{#msg}",
-                        "$set": "outbound_job"
-                    },
-
-
-
-
-
-                    {
-                        "if": "{#outbound_msg_result}",
-                        "$class": "redis",
-                        "$method": "setValue",
-                        "key": "{$campaignObj.targets_log}",
-                        "property": "{#every.item}",
-                        "value": "{#outbound_msg_result}"
-                    },
-                    {
-                        "if": "{#outbound_msg_result}",
-                        "$class": "redis",
-                        "$method": "incr",
-                        "key": "{$campaignObj.successes}",
-                        "$set": "newValue"
-                    },
-                    {
-                        "$class": "redis",
-                        "$method": "publish",
-                        "channel": "opxi2.campaign.change.{$job.data}",
-                        "message": "{$job.data}"
+                        "data": "[*msg]",
+                        "$set": "outbound_job_id"
                     }
-
-
-
-
-
-
-
                 ],
-                "$set": "outbound_jobs"
+                "$set": "outbound_job_ids"
             }
         ],
-        "$set": "campaign_result"
+        "$set": "cmp_jobs"
     },
     {
-        "if": "{$campaign_result}",
+        "if": "{$cmp_jobs}",
+        "$class": "redis",
+        "$method": "setValue",
+        "key": "{$job.data}",
+        "property": "outbound_job_ids",
+        "value": "{$cmp_jobs}"
+    },
+    {
+        "if": "{$cmp_jobs}",
         "$class": "redis",
         "$method": "setValue",
         "key": "{$job.data}",
@@ -116,7 +88,7 @@
         "value": "Complete"
     },
     {
-        "if": "{$campaign_result}",
+        "if": "{$cmp_jobs}",
         "$class": "redis",
         "$method": "publish",
         "channel": "opxi2.campaign.change.{$job.data}",
