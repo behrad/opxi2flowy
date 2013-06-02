@@ -72,7 +72,11 @@ util.extend( redis.prototype, {
      */
     setValue: function() {
         var redis = this.createClient();
-        redis.hset( this.key, this.property, JSON.stringify( this.value ), this.errorHandler( redis ) );
+        var value = JSON.stringify( this.value );
+        if( this.value.indexOf && this.value.split ) {
+            value = this.value;
+        }
+        redis.hset( this.key, this.property, value, this.errorHandler( redis ) );
     },
 
     /**
@@ -115,6 +119,7 @@ util.extend( redis.prototype, {
      * Wait for the next message available on the pattern
      *
      * @pattern the pattern to subscribe to
+     * @timeout in seconds
      *
      * The returned event will have to properties
      * @channel the channel the event is received on
@@ -145,7 +150,7 @@ util.extend( redis.prototype, {
                 redis.punsubscribe( self.pattern );
                 redis.quit();
                 redis.end();
-            }, Number( self.timeout ) );
+            }, Number( self.timeout*1000 ) );
         }
     },
 

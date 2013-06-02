@@ -1,0 +1,25 @@
+[
+    {
+        "$class": "wait",
+        "secs": 5,
+        "$set": "ready"
+    },
+    {
+        "if": "{$ready}",
+        "$function":"Array",
+        "$args":[
+            "data", "must", "flow"
+        ],
+        "$set":"data"
+
+    },
+    {
+        "$function": "toUpperCase",
+        "$origin": "behrad",
+        "$set": "name"
+    },
+    {
+        "$function": "console.print",
+        "$args": ["Finished!","{$data}"]
+    }
+]

@@ -8,7 +8,7 @@ var job = module.exports = function( config ) {
 
 job.defaultConfig = {
     $priority: 'normal',
-    $retires: 1,
+    $retires: 2,
 	verbose: true
 };
 
@@ -43,17 +43,28 @@ util.extend( job.prototype, {
             my_job.on( 'complete', function() {
                 my_job.get( 'data', function(error, result) {
                     if (error) {
-                        self.emit( 'error', 'No job complete data: ' + error );
+                        self.emit( 'error', 'Job('+my_job.id+') completed but has no data: '+error );
                         return self.failed( error );
                     }
                     return self.completed( result );
                 });
             }).on( 'failed', function() {
-                self.failed( 'Job ' + my_job.id + ' Error' );
-            }).on('progress', function( progress ){
+                my_job.get( 'data', function(error, result) {
+                    if (error) {
+                        self.emit( 'error', 'Job('+my_job.id+') completed but has no data: '+error );
+                        return self.failed( error );
+                    }
+                    if( self.ignore_on_fail ) {
+                        return self.completed( result );
+                    }
+                    return self.failed( result );
+                });
+            }).on( 'progress', function( progress ){
             });
         } else {
-            self.completed( my_job );
+            setTimeout( function(){
+                self.completed( my_job.id );
+            }, 100 );
         }
         if( self.delay && !isNaN( self.delay ) ) {
             opxi2.taskq.promote();
@@ -70,8 +81,8 @@ util.extend( job.prototype, {
      */
     done: function () {
         var self = this;
-        self.job.set( 'data' , JSON.stringify( self.message ), self.done );
-        self.completed( self.message );
+        self.job.set( 'data' , JSON.stringify( self.data ), self.done );
+        self.completed( self.data );
     }
 
 });

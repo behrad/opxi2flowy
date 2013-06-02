@@ -1,5 +1,8 @@
 [
     {
+        "$function": "console.print",
+        "$args": ["11111111 ","{$message}", "{$channel}"]
+    },{
         "$class": "couch",
         "$method": "get",
         "id": "{$message}",

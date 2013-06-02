@@ -4,6 +4,10 @@
         "$set": "uuid"
     },
     {
+        "$function": "console.print",
+        "$args": [ "**************************** UUID: ", "{$uuid}" ]
+    },
+    {
         "$class": "message",
         "id": "{$uuid}",
         "outbound": true,
@@ -28,6 +32,7 @@
     },
     {
         "if": "{$attached_msg_ready}",
+        "important": true,
         "$class": "couch",
         "$method": "get",
         "id": "{$uuid}",

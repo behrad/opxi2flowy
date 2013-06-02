@@ -10,7 +10,7 @@
         "$method": "setValue",
         "key": "{$job.data}",
         "property": "status",
-        "value": "Started"
+        "value": "started"
     },
     {
         "$class": "redis",
@@ -21,7 +21,7 @@
     {
         "if": "{$campaign}",
         "$function": "console.print",
-        "$args": [ "Process Campaign: ", "{$campaign}" ]
+        "$args": [ "Process Campaign ", "{$job.data}", "{$campaign}" ]
     },
     {
         "$class": "redis",
@@ -55,6 +55,7 @@
                     {
                         "$class": "message",
                         "$method": "from_campaign",
+                        "campaignId": "{*job.data}",
                         "dest": "[*every.item]",
                         "campaign": "{*campaign}",
                         "$set": "msg"
@@ -85,7 +86,7 @@
         "$method": "setValue",
         "key": "{$job.data}",
         "property": "status",
-        "value": "Complete"
+        "value": "complete"
     },
     {
         "if": "{$cmp_jobs}",

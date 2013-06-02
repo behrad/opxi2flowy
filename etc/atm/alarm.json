@@ -54,7 +54,8 @@
     {
         "if": "{$branch_contacts}",
         "$class": "message",
-        "$method": "multi_dest_msg",
+        "$method": "as_alarm_msg",
+        "alarm_id": "{$job.data.id}",
         "media_url": "{$job.data.alarm_media_url}",
         "destinations": "{$branch_contacts}",
         "answer_timeout": 30,

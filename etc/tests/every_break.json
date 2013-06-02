@@ -1,0 +1,44 @@
+[
+    {
+        "$function":"Array",
+        "$args":[
+            "data", "must", "flow"
+        ],
+        "$set":"data"
+
+    },
+    {
+        "$function": "toUpperCase",
+        "$origin": "behrad",
+        "$set": "name"
+    },
+    {
+        "$every": "{$data}",
+        "$collect": "result",
+        "$tasks":[
+            {
+                "$class": "uuid",
+                "$method": "chance",
+                "retries": 2,
+                "weight": 0.3,
+                "$set": "ok_with_me"
+            },
+            {
+                "if": "[*ok_with_me]",
+                "$function": "console.print",
+                "$args": ["Salaaam: ","[*every.item]"]
+            },
+            {
+                "if": "[*ok_with_me]",
+                "$function": "toUpperCase",
+                "$origin": "[*every.item]",
+                "$set": "result"
+            }
+        ],
+        "$set": "results"
+    },
+    {
+        "$function": "console.print",
+        "$args": ["Finished!","{$results}"]
+    }
+]

@@ -23,7 +23,9 @@
         "$origin":"{$job.data.status}",
         "$set":"status"
     },{
-        "if": "{$delivered}",
+        "$function": "console.print",
+        "$args": ["opxi2.outbound.sms.delivery.{$job.data.id}.{$status}"]
+    },{
         "$class": "redis",
         "$method": "publish",
         "channel": "opxi2.outbound.sms.delivery.{$job.data.id}.{$status}",

@@ -17,7 +17,7 @@
         "$method": "setValue",
         "key": "{$message}",
         "property": "status",
-        "value": "Canceled"
+        "value": "canceled"
     },
     {
         "if": "{$campaignHash.job_id}",

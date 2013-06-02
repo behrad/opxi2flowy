@@ -19,7 +19,7 @@
         "$set": "logResp"
     },
     {
-        "if": "{$campaign.id}",
+        "if": "{$logResp}",
         "$class": "job",
         "blocking": true,
         "name": "authorize-msg",
@@ -47,7 +47,7 @@
         "$method": "setValue",
         "key": "{$message}",
         "property": "status",
-        "value": "Queued"
+        "value": "queued"
     },
     {
         "if": "{$auth.success}",

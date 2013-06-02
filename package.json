@@ -11,7 +11,7 @@
     },
     "main": "main.js",
     "scripts": {
-        "postinstall": "sudo npm link && node -e \"require('dataflo.ws').install('opxi2flowy')\"",
+        "postinstall": "npm link && node -e \"require('dataflo.ws').install('opxi2flowy')\"",
         "test": "echo \"Error: no test specified\" && exit 1"
     },
     "dependencies": {

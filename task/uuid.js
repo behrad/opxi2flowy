@@ -20,7 +20,18 @@ util.extend( uuidTask.prototype, {
                 console.error( e );
                 self.failed( {error: e } );
             }
-        });
+        }, self.service );
+    },
+
+    chance: function() {
+        var weight = Number( this.weight ) || 0.5;
+        var rand = Math.random();
+        console.log( "RAAAAAAAAAAAANDOM: " + rand );
+        (rand <= weight) ? this.completed( rand <= weight ) : this.failed( rand ) ;
+    },
+
+    test_failed: function() {
+        this.completed( 24 );
     }
 
 });

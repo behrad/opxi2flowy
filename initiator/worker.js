@@ -85,7 +85,7 @@ worker.prototype.onCompleted = function( job, done ) {
     return function( wf ) {
         if( wf.$backdata ) {
             var result = this.getProperty( wf.data, wf.$backdata );
-            console.log( "Worker completed with data %j=%j", wf.$backdata, result );
+            console.log( "Worker %s completed with data %j=%j", wf.name, wf.$backdata, result );
             var check = result, checkName = wf.$backdata;
             if( wf.$failcheck ) {
                 check = this.getProperty( wf.data, wf.$failcheck );
@@ -108,8 +108,8 @@ worker.prototype.onCompleted = function( job, done ) {
 
 worker.prototype.onFailed = function( job, done ) {
     return function( wf ) {
-        console.log( "Failed workflow '%j'", wf );
-        done( { error: true, message: 'flow failed', flowId: wf.id } );
+        console.log( "Failed workflow '%j'", wf.id );
+        done( { error: true, message: 'flow failed: ' + wf.error, flowId: wf.id } );
     }.bind( this );
 };
 
