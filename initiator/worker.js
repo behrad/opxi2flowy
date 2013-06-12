@@ -45,9 +45,9 @@ worker.prototype.listen = function( workflowConfig ) {
         console.log("Receive job(%s): %s=%j", job.id, workflowConfig.name, job.data );
         job.last_attempt = (Number(job._attempts) + 1) == Number(job._max_attempts);
         job.current_attempt = job._attempts;
-        var wf = new Workflow(
-            util.extend (true, {}, workflowConfig ), {
-                job: job
+        var wf = new Workflow( util.extend (true, {}, workflowConfig ), {
+            name: workflowConfig.name,
+            job: job
         });
     //	wf.data.job = job;
     //	wf.data.done = done;
@@ -109,7 +109,7 @@ worker.prototype.onCompleted = function( job, done ) {
 worker.prototype.onFailed = function( job, done ) {
     return function( wf ) {
         console.log( "Failed workflow '%j'", wf.id );
-        done( { error: true, message: 'flow failed: ' + wf.error, flowId: wf.id } );
+        done( { error: true, message: 'flow '+wf.id+' failed: ' + wf.error, flowId: wf.id } );
     }.bind( this );
 };
 

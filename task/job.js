@@ -28,7 +28,7 @@ util.extend( job.prototype, {
      */
     run: function () {
         var self = this;
-        self.emit( 'warn', 'Creating kue job ' + self.name );
+        self.emit( 'info', 'Creating kue job ' + self.name );
         if( self.data && !self.data.title ) {
             self.data.title = "Job " + self.name;
         }

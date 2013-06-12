@@ -9,36 +9,41 @@
     },
     {
         "$function": "toUpperCase",
-        "$origin": "behrad",
+        "$origin": "sms-behrad",
         "$set": "name"
     },
     {
+        "$function":"match",
+        "$origin":"{$name}",
+        "$args": [ "^[^-]+" ],
+        "$set": "matched"
+    },{
+        "if": "{$matched}",
+        "$function":"shift",
+        "$origin":"{$matched}",
+        "$set": "my_channel"
+    },
+    {
         "$every": "{$data}",
-        "$collect": "result",
         "$tasks":[
             {
                 "$class": "uuid",
                 "$method": "chance",
                 "retries": 2,
-                "weight": 0.3,
+                "weight": 0.9,
                 "$set": "ok_with_me"
+            },
+            {
+                "$function":"join",
+                "$origin":[ "{*my_channel}", "-_-", "[*every.item]" ],
+                "$args":[""],
+                "$set":"my_data"
             },
             {
                 "if": "[*ok_with_me]",
                 "$function": "console.print",
-                "$args": ["Salaaam: ","[*every.item]"]
-            },
-            {
-                "if": "[*ok_with_me]",
-                "$function": "toUpperCase",
-                "$origin": "[*every.item]",
-                "$set": "result"
+                "$args": ["Salaaam ","[*my_data]"]
             }
-        ],
-        "$set": "results"
-    },
-    {
-        "$function": "console.print",
-        "$args": ["Finished!","{$results}"]
+        ]
     }
 ]

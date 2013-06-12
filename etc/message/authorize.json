@@ -1,9 +1,13 @@
 [
     {
-        "$class": "crm",
+        "$class": "message",
+        "data": "{$job.data}",
+        "$set": "message"
+    },
+    {
+        "$class": "message",
         "$method": "is_authorized",
-        "user": "{$job.data.from}",
-        "message": "{$job.data}",
+        "message": "{$message}",
         "$set": "auth"
     },
     {

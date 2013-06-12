@@ -57,8 +57,18 @@
         "message": "{$message}"
     },
     {
-        "if": "{$job_id}",
-        "$function": "console.print",
-        "$args": [ "Campaign-Run Job: ", "{$job_id}"]
+        "if": "{$auth.failed}",
+        "$class": "redis",
+        "$method": "setValue",
+        "key": "{$message}",
+        "property": "status",
+        "value": "not_authorized"
+    },
+    {
+        "if": "{$auth.failed}",
+        "$class": "redis",
+        "$method": "publish",
+        "channel": "opxi2.campaign.change.{$message}",
+        "message": "{$message}"
     }
 ]

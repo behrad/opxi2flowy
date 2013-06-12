@@ -20,23 +20,10 @@
         "$set": "campaign"
     },
     {
-        "$function":"match",
-        "$origin":"{$channel}",
-        "$args": [ "[^.]+[^.]$" ],
-        "$set": "matched"
-    },{
-        "if": "{$matched}",
-        "$function":"shift",
-        "$origin":"{$matched}",
-        "$set": "status"
-    },
-    {
         "if": "{$campaign}",
         "$class": "redis",
-        "$method": "setValue",
-        "key": "{$campaign.targets_log}",
-        "property": "{$msglog.to}",
-        "value": "{$status}"
+        "$method": "incr",
+        "key": "{$campaign.sends}"
     },
     {
         "$class": "redis",

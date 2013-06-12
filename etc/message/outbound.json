@@ -4,10 +4,6 @@
         "$set": "uuid"
     },
     {
-        "$function": "console.print",
-        "$args": [ "**************************** UUID: ", "{$uuid}" ]
-    },
-    {
         "$class": "message",
         "id": "{$uuid}",
         "outbound": true,

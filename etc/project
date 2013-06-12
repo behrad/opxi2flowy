@@ -34,9 +34,25 @@
                 "$backdata": "auth",
                 "tasks": "<message/authorize.json>"
             },{
+                "name": "sms-error-notify",
+                "concurrency": 100,
+                "tasks": "<message/error-notify.json>"
+            },{
+                "name": "email-error-notify",
+                "concurrency": 100,
+                "tasks": "<message/error-notify.json>"
+            },{
+                "name": "voice-error-notify",
+                "concurrency": 100,
+                "tasks": "<message/error-notify.json>"
+            },{
+                "name": "email-send-notify",
+                "concurrency": 100,
+                "tasks": "<message/send-notify.json>"
+            },{
                 "name": "sms-send-notify",
                 "concurrency": 100,
-                "tasks": "<message/sms-send-notify.json>"
+                "tasks": "<message/send-notify.json>"
             },{
                 "name": "sms-delivery-notify",
                 "concurrency": 100,
@@ -90,6 +106,12 @@
 				"pattern": "opxi2.outbound.*",
 				"tasks": "<campaign/msglog.json>"
 			},{
+                "pattern": "opxi2.outbound.email.send.*",
+                "tasks": "<campaign/successlog.json>"
+			},{
+                "pattern": "opxi2.outbound.sms.send.*",
+                "tasks": "<campaign/sentlog.json>"
+			},{
                 "pattern": "opxi2.outbound.sms.delivery.*.delivered",
                 "tasks": "<campaign/successlog.json>"
 			},{
@@ -132,10 +154,10 @@
                 "filter": "query/atm_event",
                 "tasks": "<atm/event.json>"
             },{
-                "filter": "query/important",
+                "filter": "query/important2",
                 "tasks": "<tests/simple_test.json>"
             },{
-                "filter": "query/important2",
+                "filter": "query/important",
                 "tasks": "<tests/every_break.json>"
             }]
         }

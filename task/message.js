@@ -25,6 +25,17 @@ util.extend( msg.prototype, {
         this.completed( msg );
     },
 
+    is_authorized: function() {
+        var self = this;
+        self.message.is_authorized( function( err, auth_resp ) {
+            if( err ) {
+                console.log( "err: ", err );
+                return self.failed( { error: err } );
+            }
+            return self.completed( auth_resp );
+        });
+    },
+
     is_delivered: function() {
         this.completed( new Message().is_delivered( this.data ) );
     },
@@ -90,16 +101,6 @@ util.extend( msg.prototype, {
 
     as_log: function() {
         this.completed( new Message().as_log( this.action, this.data, this.index ) );
-    },
-
-    /**
-     * Publishes a message in redis
-     * @channel the channel to publish to
-     * @message String message to be published
-     *
-     * return publish command response
-     */
-    filter: function() {
     }
 
 });

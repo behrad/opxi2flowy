@@ -1,5 +1,16 @@
 [
     {
+        "$function":"match",
+        "$origin":"{$name}",
+        "$args": [ "^[^-]+" ],
+        "$set": "matched"
+    },{
+        "if": "{$matched}",
+        "$function":"shift",
+        "$origin":"{$matched}",
+        "$set": "my_channel"
+    },
+    {
         "$every": "{$job.data.id}",
         "$tasks": [
             {
@@ -18,10 +29,16 @@
                 "data": "[*posting_log]"
             },
             {
+                "$function":"join",
+                "$origin":[ "opxi2.outbound.", "{*my_channel}", ".send.", "[*every.item]", ".sent" ],
+                "$args":[""],
+                "$set":"publish_channel"
+            },
+            {
                 "if": "[*posting_log.posting.ok]",
                 "$class": "redis",
                 "$method": "publish",
-                "channel": "opxi2.outbound.sms.send.[*every.item].sent",
+                "channel": "[*publish_channel]",
                 "message": "[*every.item]"
             }
         ]
