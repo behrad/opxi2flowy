@@ -80,13 +80,18 @@ util.extend( redis.prototype, {
     },
 
     /**
-     * Get all keys in a redis hash
+     * Set keys in a redis hash
      * @key redis hash name
      * @data json object to store under the key
      */
     setHash: function() {
         var redis = this.createClient();
         redis.hmset( this.key, this.data, this.errorHandler( redis ) );
+    },
+
+    set: function() {
+        var redis = this.createClient();
+        redis.set( this.key, this.value, this.errorHandler( redis ) );
     },
 
     /**
@@ -125,9 +130,18 @@ util.extend( redis.prototype, {
      * @channel the channel the event is received on
      * @message the published event message
      */
-    wait_for: function() {
+    wait_first: function() {
         var self = this;
         var redis = this.createClient();
+        self.on( 'cancel', function () {
+            console.log( "CANCEEL MY SUBSCRIPTION! " );
+            redis.punsubscribe( self.pattern );
+            redis.quit();
+            redis.end();
+            if( timer ) {
+                clearTimeout( timer );
+            }
+        }.bind( self ) );
         redis.on( "pmessage", function ( pattern, channel, message ) {
             self.completed( {message: message, channel: channel} );
             redis.punsubscribe( self.pattern );
@@ -137,13 +151,14 @@ util.extend( redis.prototype, {
                 clearTimeout( timer );
             }
         });
-        redis.on("psubscribe", function (pattern, count) {
+        redis.on( "psubscribe", function (pattern) {
             console.log( "Task wait for next message on %s ", pattern );
         });
-        redis.on("punsubscribe", function (pattern, count) {
+        redis.on( "punsubscribe", function (pattern, count) {
             console.log( "Task unSubscribed to %s, remaining subs: %s", pattern, count );
         });
         redis.psubscribe( self.pattern );
+
         if( self.timeout ) {
             var timer = setTimeout( function(){
                 self.completed( { timeout: true } );
@@ -152,6 +167,10 @@ util.extend( redis.prototype, {
                 redis.end();
             }, Number( self.timeout*1000 ) );
         }
+    },
+
+    cancel: function() {
+//        console.log( "googooli" );
     },
 
     errorHandler: function( redis, clbk ) {

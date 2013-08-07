@@ -1,0 +1,6 @@
+[
+    {
+        "$function": "console.print",
+        "$args": ["Alarm Supervisor: ", "{$job.data}"]
+    }
+]

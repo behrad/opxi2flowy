@@ -1,0 +1,16 @@
+[
+
+    {
+        "$class": "atm_event",
+        "$method": "process",
+        "event": "{$job.data}",
+        "job_id": "{$job.id}",
+        "$set": "failure"
+    },
+    {
+        "$class": "job",
+        "name": "atm_event_process",
+        "$priority": "high",
+        "data": "{$failure}"
+    }
+]

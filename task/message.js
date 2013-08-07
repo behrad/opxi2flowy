@@ -25,23 +25,15 @@ util.extend( msg.prototype, {
         this.completed( msg );
     },
 
-    is_authorized: function() {
-        var self = this;
-        self.message.is_authorized( function( err, auth_resp ) {
-            if( err ) {
-                console.log( "err: ", err );
-                return self.failed( { error: err } );
-            }
-            return self.completed( auth_resp );
-        });
-    },
-
-    is_delivered: function() {
-        this.completed( new Message().is_delivered( this.data ) );
+    as_logable: function() {
+        this.completed( this.message.as_logable() );
     },
 
     attach_body: function() {
         var self = this;
+        if( self.dont_attach ) {
+            return self.completed( self.message );
+        }
         this.message.attach_body( function( err, resp ){
             if( err ) return self.failed( err );
             return self.completed( resp );
@@ -50,16 +42,6 @@ util.extend( msg.prototype, {
 
     is_voice: function() {
         this.completed( this.message.is_voice() );
-    },
-
-    delivery_pattern: function() {
-        if( this.channel == 'sms' ) {
-            return "opxi2.outbound.sms.delivery.*.delivered";
-        } else if ( this.channel == 'voice' ) {
-            return "opxi2.outbound.voice.callee.*.accepted";
-        } else {
-            return "opxi2.outbound.fax.callee.*.accepted";
-        }
     },
 
     as_alarm_msg: function() {
@@ -79,18 +61,19 @@ util.extend( msg.prototype, {
     },
 
     as_multi_dest: function() {
-        var i = this.index || 0;
+        var i = Number(this.index)-1 || 0;
         var msg = new Message( this.data );
+        console.log( "Going to send to destination ", i, typeof i );
         msg.to = this.data.destinations[i].address;
         msg.channel = this.data.destinations[i].channel;
-//        msg.acccountId = this.data.destinations[i].id;
+        msg.to_account_id = this.data.destinations[i].id;
         delete msg.destinations;
         this.completed( msg );
     },
 
     as_campaign: function() {
         var self = this;
-        var msg = new Message( this.data ).as_campaign( this.id );
+        var msg = new Message( self.data ).as_campaign( self.id );
         self.completed( msg );
     },
 

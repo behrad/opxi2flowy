@@ -9,33 +9,45 @@
     {
         "$class": "job",
         "name": "outbound-msg",
+        "blocking": true,
         "data": "{$msg}",
-        "$set": "outbound_job_id"
+        "$set": "outbound_job"
     },
     {
-        "$class": "message",
-        "$method": "delivery_pattern",
-        "channel": "{$msg.channel}",
-        "$set": "delivery_pattern"
+        "if": "{$outbound_job.error}",
+        "$class": "util",
+        "$method": "clone",
+        "from": "{$outbound_job}",
+        "$set": "log"
     },
     {
-        "if": "{$outbound_job_id}",
+        "if": "{$outbound_job.ok}",
+        "$function":"join",
+        "$origin":[ "opxi2.outbound.", "{$msg.channel}", ".delivery.*.delivered" ],
+        "$args":[""],
+        "$set":"delivery_pattern"
+    },
+    {
+        "if": "{$outbound_job.ok}",
         "$class": "redis",
-        "$method": "wait_for",
+        "$method": "wait_first",
         "pattern": "{$delivery_pattern}",
         "timeout": "{$job.data.answer_timeout}",
         "$set": "dest_response"
     },
     {
         "if": "{$dest_response.timeout}",
-        "$function": "Boolean",
-        "$args": [false],
-        "$set": "answered"
+        "$class": "util",
+        "$method": "clone",
+        "from": "{$msg}",
+        "$set": "log"
     },
     {
         "if": "{$dest_response.message}",
-        "$function": "Boolean",
-        "$args": [true],
-        "$set": "answered"
+        "$class": "util",
+        "$method": "set",
+        "name":  ["answered", "to"],
+        "value": [true, "{$msg.to}"],
+        "$set": "log"
     }
 ]

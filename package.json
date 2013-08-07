@@ -10,11 +10,13 @@
         "url": "https://github.com/behrad/opxi2flowy"
     },
     "main": "main.js",
+    "bin": { "opxi2flowy": "bin/opxi2flowy" },
     "scripts": {
-        "postinstall": "npm link && node -e \"require('dataflo.ws').install('opxi2flowy')\"",
+        "postinstall": "node -e \"require('dataflo.ws').install('opxi2flowy')\"",
         "test": "echo \"Error: no test specified\" && exit 1"
     },
     "dependencies": {
+        "dataflo.ws": "https://github.com/behrad/dataflo.ws/tarball/master",
         "moment": "*"
     },
     "keywords": [

@@ -1,5 +1,17 @@
 [
     {
+        "$function":"match",
+        "$origin":"{$name}",
+        "$args": [ "^[^-]+" ],
+        "$set": "matched"
+    },
+    {
+        "if": "{$matched}",
+        "$function":"shift",
+        "$origin":"{$matched}",
+        "$set": "msg_channel"
+    },
+    {
         "$class": "message",
         "$method": "as_log",
         "action": "delivery-report",
@@ -10,25 +22,25 @@
         "if": "{$delivery_log}",
         "$class": "couch",
         "$method": "update",
+        "retries": 2,
         "id": "{$job.data.id}",
         "data": "{$delivery_log}"
     },
     {
-        "$class": "message",
-        "$method": "is_delivered",
-        "data": "{$job.data}",
-        "$set": "delivered"
-    },{
         "$function":"toLowerCase",
         "$origin":"{$job.data.status}",
         "$set":"status"
-    },{
-        "$function": "console.print",
-        "$args": ["opxi2.outbound.sms.delivery.{$job.data.id}.{$status}"]
-    },{
+    },
+    {
+        "$function":"join",
+        "$origin":[ "opxi2.outbound.", "{$msg_channel}", ".delivery.", "{$job.data.id}", ".", "{$status}" ],
+        "$args":[""],
+        "$set":"publish_channel"
+    },
+    {
         "$class": "redis",
         "$method": "publish",
-        "channel": "opxi2.outbound.sms.delivery.{$job.data.id}.{$status}",
+        "channel": "{$publish_channel}",
         "message": "{$job.data.id}"
     }
 ]

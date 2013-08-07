@@ -1,7 +1,32 @@
 [
     {
+        "$class": "util",
+        "$method": "set",
+        "name":"job_id",
+        "value":"{$message}",
+        "$set": "cancel_data"
+    },
+    {
         "$class": "job",
-        "name": "cancel-outbound-notify-first",
-        "data": "{$message}"
+        "name": "cancel-atm_device_event",
+        "data": "{$cancel_data}"
+    },
+    {
+        "$function":"match",
+        "$origin":"{$channel}",
+        "$args": [ "[^.]*[^.]$" ],
+        "$set": "matched"
+    },
+    {
+        "if": "{$matched}",
+        "$function":"shift",
+        "$origin":"{$matched}",
+        "$set": "eventId"
+    },
+    {
+        "$class": "atm_event",
+        "$method": "update",
+        "eventId":"{$eventId}",
+        "status":"alarm canceled"
     }
 ]

@@ -72,7 +72,7 @@ redis_event.prototype.listen = function( workflowConfig ) {
             }
         },
         on_subscribe: function (pattern, count) {
-            console.log( "Waiting for new messages on %s ", pattern );
+            console.log( "Subscribed to new messages on %s ", pattern );
         },
         on_unsubscribe: function (pattern, count) {
             console.log( "UnSubscribed to %s, %s", pattern, count );

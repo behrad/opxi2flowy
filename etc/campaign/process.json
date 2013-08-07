@@ -6,15 +6,27 @@
         "$set": "campaignHash"
     },
     {
+        "if": "{$campaignHash}",
+        "$class": "redis",
+        "$method": "set",
+        "key": "{$campaignHash.sends}",
+        "value": 0
+    },
+    {
+        "if": "{$campaignHash}",
+        "$class": "redis",
+        "$method": "set",
+        "key": "{$campaignHash.successes}",
+        "value": 0
+    },
+    {
         "$class": "message",
         "$method": "as_campaign",
-        "id": "{$message}",
         "data": "{$campaignHash}",
         "$set": "campaign"
     },
     {
         "$class": "couch",
-        "id": "{$campaign.id}",
         "doc": "{$campaign}",
         "$set": "logResp"
     },
@@ -24,13 +36,34 @@
         "blocking": true,
         "name": "authorize-msg",
         "data": "{$campaign}",
-        "$set": "auth"
+        "$set": "auth",
+        "$empty": "auth_error"
+    },
+    {
+        "if": "{$auth_error}",
+        "$function": "console.print",
+        "$args": [ "Authorization Error ", "{$auth_error}" ]
+    },
+    {
+        "if": "{$auth_error}",
+        "$class": "redis",
+        "$method": "setValue",
+        "key": "{$message}",
+        "property": "status",
+        "value": "auth_error"
+    },
+    {
+        "if": "{$auth_error}",
+        "$class": "redis",
+        "$method": "publish",
+        "channel": "opxi2.campaign.change.{$message}",
+        "message": "{$message}"
     },
     {
         "if": "{$auth.success}",
         "$class": "job",
         "name": "campaign-run",
-        "data": "{$campaign.id}",
+        "data": "{$message}",
         "$set": "job_id"
     },
     {

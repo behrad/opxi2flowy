@@ -23,19 +23,28 @@
             },
             {
                 "if": "[*posting_log]",
+                "retries": 2,
                 "$class": "couch",
                 "$method": "update",
                 "id": "[*every.item]",
                 "data": "[*posting_log]"
             },
             {
+                "if": "[*posting_log.posting.status]",
                 "$function":"join",
-                "$origin":[ "opxi2.outbound.", "{*my_channel}", ".send.", "[*every.item]", ".sent" ],
+                "$origin":[ "opxi2.outbound.", "{*my_channel}", ".send.", "[*every.item]", ".", "[*posting_log.posting.status]" ],
                 "$args":[""],
                 "$set":"publish_channel"
             },
             {
-                "if": "[*posting_log.posting.ok]",
+                "if": "[*posting_log.posting.error]",
+                "$function":"join",
+                "$origin":[ "opxi2.outbound.", "{*my_channel}", ".send.", "[*every.item]", ".", "[*posting_log.posting.error]" ],
+                "$args":[""],
+                "$set":"publish_channel"
+            },
+            {
+                "if": "[*posting_log.posting]",
                 "$class": "redis",
                 "$method": "publish",
                 "channel": "[*publish_channel]",

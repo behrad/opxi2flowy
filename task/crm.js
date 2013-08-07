@@ -1,5 +1,5 @@
 var task = require ('dataflo.ws/task/base'),
-    crm = require( 'opxi2node/crm'),
+    crm = require( 'opxi2crm' ),
     util = require( 'util' );
 
 
@@ -38,8 +38,24 @@ util.extend( msg.prototype, {
         });
     },
 
-    isEmpty: function( val ){
-        return val && val != null && val != undefined;
+    isEmpty: function( obj ){
+        return (
+            (obj === undefined)           ||
+            (obj ===      null)           ||
+            (obj.length != undefined && obj.length==0) ||
+            (typeof obj == "object" && Object.keys(obj).length==0)
+        );
+    },
+
+    is_authorized: function() {
+        var self = this;
+        crm.is_authorized( self.message, function( err, auth_resp ) {
+            if( err ) {
+                console.log( "err: ", err );
+                return self.failed( { error: err } );
+            }
+            return self.completed( auth_resp );
+        });
     },
 
     homes: function() {
@@ -51,8 +67,7 @@ util.extend( msg.prototype, {
             var cells = contacts.map( function( contact ) {
                 return self.add_address( "tel_home", contact, "voice" );
             });
-
-            return done( cells.filter( self.isEmpty ) );
+            return done( null, cells.filter( self.isValid.bind(self) ) );
         });
     },
 
@@ -65,7 +80,7 @@ util.extend( msg.prototype, {
             var cells = contacts.map( function( contact ) {
                 return self.add_address( "tel_work", contact, "voice" );
             });
-            return done( cells );
+            return done( null, cells.filter( self.isValid.bind(self) ) );
         });
     },
 
@@ -78,7 +93,7 @@ util.extend( msg.prototype, {
             var cells = contacts.map( function( contact ) {
                 return self.add_address( "tel_cell", contact, "sms" );
             });
-            return done( cells );
+            return done( null, cells.filter( self.isValid.bind(self) ) );
         });
     },
 
@@ -88,7 +103,7 @@ util.extend( msg.prototype, {
             if( self.getProperty(c1, prop ) == undefined ) return 1;
             if( self.getProperty(c2, prop ) == undefined ) return 0;
             return self.getProperty(c1, prop )>self.getProperty(c2, prop ) ? 1: 0;
-        };
+        }.bind( this );
     },
 
     add_address: function( addressField, contact, channel ) {
@@ -103,7 +118,7 @@ util.extend( msg.prototype, {
     },
 
     isValid: function( address, channel ) {
-        return address != null && address != '';
+        return !this.isEmpty( address );
     },
 
     event_matches: function() {
@@ -113,7 +128,18 @@ util.extend( msg.prototype, {
                 console.log( "err: ", err );
                 return self.failed( { error: err } );
             }
-            return self.completed( matched );
+            self.completed( matched );
+        });
+    },
+
+    wait_until: function() {
+        var self = this;
+        crm.wait_until( self.event, function( err, matched ) {
+            if( err ) {
+                console.log( "err: ", err );
+                return self.failed( { error: err } );
+            }
+            self.completed( matched );
         });
     },
 

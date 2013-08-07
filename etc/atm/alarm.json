@@ -1,8 +1,8 @@
 [
     {
         "$class": "atm_event",
-        "$method": "branchOf",
-        "atm_name": "{$job.data.atm_id}",
+        "$method": "event_branch",
+        "eventId": "{$job.data.id}",
         "$set": "branch"
     },
     {
@@ -12,43 +12,59 @@
         "query": "org_unit",
         "value": "{$branch.id}",
         "$set": "branch_cells",
-        "$empty": "no_contacts"
+        "$empty": "no_cells"
     },
     {
-        "if": "{$no_contacts}",
-        "$function": "console.print",
-        "$args": ["No Contacts Found for branch ","{$branch.id}"]
-    },
-    {
-        "if": "{$branch_cells}",
         "$class": "crm",
         "$method": "event_matches",
         "label": "worktime",
-        "$set": "in_work_time",
-        "$empty": "off_time"
+        "$set": "at_work",
+        "$empty": "off_work"
     },
     {
-        "if": "{$off_time}",
+        "if": "{$off_work}",
         "$class": "crm",
         "$method": "homes",
         "sort_by": "customfields.alarm_priority",
         "query": "org_unit",
         "value": "{$branch.id}",
-        "$set": "branch_phones"
+        "$set": "branch_phones",
+        "$empty": "no_phones"
     },
     {
-        "if": "{$in_work_time}",
+        "if": "{$at_work}",
         "$class": "crm",
         "$method": "phones",
         "sort_by": "customfields.alarm_priority",
         "query": "org_unit",
         "value": "{$branch.id}",
-        "$set": "branch_phones"
+        "$set": "branch_phones",
+        "$empty": "no_phones"
     },
     {
-        "if": "{$branch_phones}",
+        "if": [ "{$no_cells}", "{$no_phones}" ],
+        "$class": "util",
+        "$method": "set",
+        "name":["error", "message"],
+        "value":[true, "No Contact Addresses"],
+        "$set": "alarm_answered"
+    },
+    {
+        "if": [ "{$branch_cells}", "{$branch_phones}"],
         "$function": "Array.prototype.concat",
         "$args": [ "{$branch_cells}", "{$branch_phones}" ],
+        "$set": "branch_contacts"
+    },
+    {
+        "if": [ "{$no_cells}", "{$branch_phones}"],
+        "$function": "Array.prototype.concat",
+        "$args": [ "{$branch_phones}" ],
+        "$set": "branch_contacts"
+    },
+    {
+        "if": [ "{$branch_cells}", "{$no_phones}"],
+        "$function": "Array.prototype.concat",
+        "$args": [ "{$branch_cells}" ],
         "$set": "branch_contacts"
     },
     {
@@ -56,19 +72,46 @@
         "$class": "message",
         "$method": "as_alarm_msg",
         "alarm_id": "{$job.data.id}",
-        "media_url": "{$job.data.alarm_media_url}",
+        "media_url": "{$job.data.alarm.media_url}",
         "destinations": "{$branch_contacts}",
         "answer_timeout": 30,
         "$set": "multi_msg_alarm"
     },
     {
+        "if": "{$multi_msg_alarm}",
+        "$class": "atm_event",
+        "$method": "update",
+        "eventId":"{$job.data.id}",
+        "status":"sending alarm"
+    },
+    {
+        "$class": "atm_event",
+        "$method": "event_atm",
+        "eventId": "{$job.data.id}",
+        "$set": "atm"
+    },
+    {
+        "$class": "util",
+        "$method": "set",
+        "name":[ "atm" ],
+        "value":[ "{$atm}" ],
+        "$set": "context_data"
+    },
+    {
+        "$class": "util",
+        "$method": "set",
+        "base": "{$multi_msg_alarm}",
+        "name":["__context_data"],
+        "value":["{$context_data}"],
+        "$set": "final_msg"
+    },
+    {
         "$class": "job",
         "name": "outbound-notify-first",
         "blocking": true,
-        "ignore_on_fail": true,
-        "$retires": "{$branch_contacts.length}",
+        "$retries": "{$branch_contacts.length}",
         "$priority": "high",
-        "data": "{$multi_msg_alarm}",
+        "data": "{$final_msg}",
         "$set": "alarm_answered"
     }
 ]

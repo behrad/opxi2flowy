@@ -1,0 +1,16 @@
+[
+    {
+        "$class": "util",
+        "$method": "set",
+        "base": "{$change.doc}",
+        "name":["error"],
+        "value":[true],
+        "$set": "alarm_answered"
+    },
+    {
+        "$class": "job",
+        "name": "atm_device_event",
+        "$priority": "high",
+        "data": "{$change.doc}"
+    }
+]

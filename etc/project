@@ -14,19 +14,20 @@
             "workflows": [{
                 "name": "campaign-run",
                 "cancelable": true,
-                "concurrency": 5,
+                "concurrency": 3,
                 "$backdata": "cmp_jobs",
                 "tasks": "<campaign/run.json>"
             },{
                 "name": "outbound-msg",
                 "concurrency": 30,
-                "$backdata": "uuid",
+                "$backdata": "log",
                 "tasks": "<message/outbound.json>"
             },{
                 "name": "outbound-notify-first",
                 "cancelable": true,
                 "concurrency": 5,
-                "$failcheck": "answered",
+                "$backdata": "log",
+                "$failcheck": "log.answered",
                 "tasks": "<message/outbound-notify-first.json>"
             },{
                 "name": "authorize-msg",
@@ -34,19 +35,11 @@
                 "$backdata": "auth",
                 "tasks": "<message/authorize.json>"
             },{
-                "name": "sms-error-notify",
-                "concurrency": 100,
-                "tasks": "<message/error-notify.json>"
-            },{
-                "name": "email-error-notify",
-                "concurrency": 100,
-                "tasks": "<message/error-notify.json>"
-            },{
-                "name": "voice-error-notify",
-                "concurrency": 100,
-                "tasks": "<message/error-notify.json>"
-            },{
                 "name": "email-send-notify",
+                "concurrency": 100,
+                "tasks": "<message/send-notify.json>"
+            },{
+                "name": "voice-send-notify",
                 "concurrency": 100,
                 "tasks": "<message/send-notify.json>"
             },{
@@ -56,33 +49,48 @@
             },{
                 "name": "sms-delivery-notify",
                 "concurrency": 100,
-                "tasks": "<message/sms-delivery-notify.json>"
+                "tasks": "<message/delivery-notify.json>"
             },{
-                "name": "voice-answer-notify",
+                "name": "voice-send-notify",
                 "concurrency": 100,
-                "tasks": "<message/voice-answer-notify.json>"
+                "tasks": "<message/send-notify.json>"
             },{
-                "name": "voice-accept-notify",
+                "name": "voice-delivery-notify",
                 "concurrency": 100,
-                "tasks": "<message/voice-accept-notify.json>"
+                "tasks": "<message/delivery-notify.json>"
+            },{
+                "name": "atm_device_event",
+                "concurrency": 500,
+                "cancelable": true,
+                "$backdata": "failure_result",
+                "tasks": "<atm/process.json>"
             },{
                 "name": "atm_failure_notify",
                 "concurrency": 500,
-                "$failcheck": "failure_fixed",
+                "cancelable": true,
+                "$backdata": "notification_status",
+                "$failcheck": "notification_status.fixed",
                 "tasks": "<atm/notify.json>"
             },{
                 "name": "atm_failure_alarm",
                 "concurrency": 500,
+                "cancelable": true,
                 "$backdata": "alarm_answered",
                 "tasks": "<atm/alarm.json>"
             },{
+                "name": "atm_supervisor_notify",
+                "concurrency": 100,
+                "tasks": "<atm/supervisory.json>"
+            }
+
+
+
+            ,{
                 "name": "pauseable",
-                "concurrency": 1,
-                "$backdata": "testresult",
-                "cancelable": true,
+                "concurrency": 2,
                 "tasks": [{
                     "$class": "wait",
-                    "secs": 5,
+                    "secs": 0,
                     "$set": "next"
                 },{
                     "if": "{$next}",
@@ -93,66 +101,77 @@
                     "$function": "console.print",
 					"$args": [ "New message: ", "{$testresult}" ]
                 }]
-            }]
+            }
+
+
+            ]
         },
+
+
 		"redis_event": {
 			"workflows": [{
-				"pattern": "opxi2.campaign.new.*",
+				"pattern": "opxi2.campaign.start.*",
 				"tasks": "<campaign/process.json>"
 			},{
-				"pattern": "cancel.opxi2.campaign.new.*",
+				"pattern": "cancel.opxi2.campaign.start.*",
 				"tasks": "<campaign/cancel.json>"
 			},{
 				"pattern": "opxi2.outbound.*",
 				"tasks": "<campaign/msglog.json>"
 			},{
                 "pattern": "opxi2.outbound.email.send.*",
-                "tasks": "<campaign/successlog.json>"
+                "tasks": "<campaign/sentlog.json>"
+			},{
+                "pattern": "opxi2.outbound.voice.send.*",
+                "tasks": "<campaign/sentlog.json>"
 			},{
                 "pattern": "opxi2.outbound.sms.send.*",
                 "tasks": "<campaign/sentlog.json>"
 			},{
-                "pattern": "opxi2.outbound.sms.delivery.*.delivered",
+                "pattern": "opxi2.outbound.*.delivery.*.delivered",
                 "tasks": "<campaign/successlog.json>"
-			},{
-				"pattern": "opxi2.outbound.voice.callee.*.accepted",
-				"tasks": "<campaign/successlog.json>"
 			},{
 				"pattern": "cancel.opxi2.atm.alarm.*",
 				"tasks": "<atm/cancel.json>"
 			},{
+                "pattern": "opxi2.outbound.*.send.*",
+                "tasks": "<atm/alarm_send_log.json>"
+			},{
+                "pattern": "opxi2.outbound.*.delivery.*",
+                "tasks": "<atm/alarm_send_log.json>"
+			}
+
+
+
+            ,{
 				"pattern": "opxi2.df1.*.alo",
-				"tasks": [{
-                    "$class": "wait",
-                    "secs": 1,
-                    "$set": "ready2"
-                },{
-                    "$class": "uuid",
-                    "$method": "test_failed",
-                    "$set": "ready1"
-                },{
-                    "$function": "JSON.parse",
-                    "$args": "{\"finished\": true }",
-                    "$set": "obj"
-                },{
-                    "if": "{$ready1}",
-					"$function":"Array",
-					"$args": [ 3, 2 ],
-                    "$set": "data"
-				},{
-                    "$function": "Boolean",
-                    "$args": [false],
-                    "$set": "reached_to_somebody"
-                },{
-					"$function": "console.print",
-					"$args": [ "New message: ", "{$ready1}" ]
-				}]
-			}]
+				"tasks": [
+                    {
+                        "$class": "crm",
+                        "$method": "cells",
+                        "sort_by": "customfields.alarm_priority",
+                        "query": "org_unit",
+                        "value": "4057",
+                        "$set": "branch_cells",
+                        "$empty": "no_cells"
+                    },
+                    {
+                        "$function": "console.print",
+                        "$args": ["message ", "{$branch_cells}"]
+                    }
+            ]}
+
+
+
+
+            ]
 		},
-        "couch_changes":{
+
+
+        "couch_changes": {
             "workflows":[{
                 "filter": "query/atm_event",
-                "tasks": "<atm/event.json>"
+                "tasks": "<atm/job_from_couchdb.json>"
             },{
                 "filter": "query/important2",
                 "tasks": "<tests/simple_test.json>"
@@ -161,5 +180,7 @@
                 "tasks": "<tests/every_break.json>"
             }]
         }
+
+
 	}
 }

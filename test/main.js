@@ -7,30 +7,64 @@
  */
 
 var opxi2 = require( 'opxi2node' );
-var request = require( 'request' );
-var fs = require( 'fs' );
-//var moment = require( 'moment' );
 
 
-//opxi2.db.attachment.insert("new2", "salam2.txt", "EY BABA", "text/plain",{rev: '2-3b083c4b98c15882870b3e52367be426' }, function(err, body){
-//    if( err ) return console.log( err );
-//    console.log( body );
-//});
+opxi2.taskq.process( "test_job", 200, function (job, done) {
+    job.current_attempt = Number(job._attempts)+1 || 1;
+    console.log("Receive job %s(%s): %j", "test_job", job.id, job.current_attempt , new Date() );
+    job.last_attempt = (job.current_attempt === Number(job._max_attempts));
 
-//console.log( request.get("http://192.168.254.113:5984/") );
-
-
-//setTimeout( function() {
-//    console.log( "Created Job: ", my_job.id );
-//    var my_job3 = opxi2.taskq.create( 'cancel-pauseable', { title: "Test Alaki", job_id: my_job.id } ).attempts(1).save();
-//}, 2000 );
-
-var list = [{a:{n:2}},{b:{n:1}},{a:{n:3}}].map( function(a){});
-list.sort( function( c1, c2 ) {
-    if( !c1.a ) return 1;
-    if( !c2.a ) return 0;
-    return (c1.a && c1.a.n) > (c2.a && c2.a.n)? 0: 1;
+//    job.set( 'data' , JSON.stringify( { ok: true, message: "Job Done!" }), done );
+//    done( { error: true, message: 'Worker '+job.type+' failed' } );
+    if( job.last_attempt ) {
+        job.set( 'data' , JSON.stringify( { ok: true, message: "Job Done!" }), done );
+//        done();
+//        done( { error: true, message: 'Worker '+job.type+' failed' } );
+    } else {
+        /*job.set( 'data' , JSON.stringify( { ok: true, message: "Job Done failed!" } ), function(){
+            done( { error: true, message: 'Worker '+job.type+' failed' } );
+        });*/
+        done();
+    }
 });
-console.log( list.filter(function( val ){
-        return val && val != null && val != undefined;
-    }));
+
+var my_job = opxi2.taskq.create( "test_job", { title: "test_job",  test: 123 } );
+my_job.priority( 1 ).attempts( 3 ).save();
+opxi2.taskq.on( 'job complete', function(id) {
+    console.log( "a job with id " + id + " is completed, my job id: " + my_job.id );
+    opxi2.kue.Job.get( id, function( err, job ){
+        if (err) return;
+        job.current_attempt = Number(job._attempts)+1 || 1;
+        job.last_attempt = (job.current_attempt === Number(job._max_attempts));
+    });
+});
+
+my_job.on( 'complete', function() {
+    my_job.get( 'data', function(error, result) {
+        if (error) {
+//            console.log( 'Job task '+my_job.type+' completed but has no data: ', error, new Date() );
+//            return self.failed( error );
+        }
+        console.log( 'Job task '+my_job.type+' completed with data %j, %j', result, new Date() );
+//        return self.completed( result );
+    });
+
+}).on( 'failed', function() {
+    my_job.get( 'data', function(error, result) {
+        if (error) {
+//            error.job_id = my_job.id;
+//            console.log( 'Job task '+my_job.type+' failed but has no data %j, %j ', error, new Date() );
+//            return self.failed( error );
+        }
+//        result && (result.job_id = my_job.id);
+        if( this.ignore_on_fail ) {
+//            console.log( 'Job task '+my_job.type+' completed (ignoring failed) with data %j, %j ', result, new Date() );
+//            return self.completed( result );
+        } else {
+            console.log( 'Job task '+my_job.type+' failed with data %j, %j ', result, new Date() );
+//            return self.failed( result );
+        }
+    });
+
+}).on( 'progress', function( progress ){
+});

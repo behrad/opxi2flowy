@@ -1,5 +1,5 @@
 var task = require('dataflo.ws/task/base'),
-    cms = require('opxi2node/zotonic'),
+    cms = require('opxi2node').cms,
     Message = require('opxi2node/message'),
     util = require('util');
 
@@ -32,6 +32,7 @@ util.extend( cmsTask.prototype, {
      */
     process: function() {
         var self = this;
+        self.event[ "job_id" ] = self.job_id;
         cms.apiCall({
             module: 'atm',
             method: 'event',
@@ -42,7 +43,59 @@ util.extend( cmsTask.prototype, {
         });
     },
 
-    check: function() {
+    markfailed: function() {
+        var self = this;
+        cms.apiCall({
+            module: 'atm',
+            method: 'event',
+            data: {
+                method: "markfailed",
+                id: self.eventId
+            }
+        }, function( err, resp ){
+            if( err ) return self.failed( err );
+            return self.completed( resp );
+        });
+    },
+
+    log_alarm: function() {
+        var self = this;
+        cms.apiCall({
+            module: 'atm',
+            method: 'event',
+            data: {
+                method: "log_alarm",
+                alarm_time: self.alarm_time,
+                target: self.target,
+                channel: self.channel,
+                log: self.log,
+                msgId: self.msgId,
+                id: self.eventId
+            }
+        }, function( err, resp ){
+            if( err ) return self.failed( err );
+            return self.completed( resp );
+        });
+    },
+
+    update: function() {
+        var self = this;
+        cms.apiCall({
+            module: 'atm',
+            method: 'event',
+            data: {
+                method: "update",
+                id: self.eventId,
+                x_state: self.state,
+                status: self.status
+            }
+        }, function( err, resp ){
+            if( err ) return self.failed( err );
+            return self.completed( resp );
+        });
+    },
+
+    is_good: function() {
         var self = this;
         cms.apiCall({
             module: 'atm',
@@ -50,32 +103,42 @@ util.extend( cmsTask.prototype, {
             params: { id: self.eventId }
         }, function( err, resp ){
             if( err ) return self.failed( err );
-            return self.completed( resp );
+            return self.completed( resp.event.good );
         });
 //        eventId
 //        return true if is fixed! otherwise false
     },
 
-    mark_failure: function() {
-        var self = this;
-        cms.apiCall({
-            module: 'atm',
-            method: 'event',
-            data: self.event
-        }, function( err, resp ){
-            if( err ) return self.failed( err );
-            return self.completed( resp );
-        });
-//        eventId
-        // save this event id as failure
-    },
-
-    branchOf: function() {
+    atm_branch: function() {
         var self = this;
         cms.apiCall({
             module: 'atm',
             method: 'branch',
-            params: { atm: self.atm_name }
+            params: { atm: self.atm }
+        }, function( err, resp ){
+            if( err ) return self.failed( err );
+            return self.completed( resp );
+        });
+    },
+
+    event_branch: function() {
+        var self = this;
+        cms.apiCall({
+            module: 'atm',
+            method: 'branch',
+            params: { id: self.eventId }
+        }, function( err, resp ){
+            if( err ) return self.failed( err );
+            return self.completed( resp );
+        });
+    },
+
+    event_atm: function() {
+        var self = this;
+        cms.apiCall({
+            module: 'atm',
+            method: 'atm',
+            params: { id: self.eventId }
         }, function( err, resp ){
             if( err ) return self.failed( err );
             return self.completed( resp );

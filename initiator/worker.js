@@ -42,41 +42,53 @@ worker.prototype.ready = function () {
 worker.prototype.listen = function( workflowConfig ) {
     var self = this;
     opxi2.taskq.process( workflowConfig.name, workflowConfig.concurrency, function (job, done) {
-        console.log("Receive job(%s): %s=%j", job.id, workflowConfig.name, job.data );
-        job.last_attempt = (Number(job._attempts) + 1) == Number(job._max_attempts);
-        job.current_attempt = job._attempts;
-        var wf = new Workflow( util.extend (true, {}, workflowConfig ), {
+        console.log("Receive job %s(%s): %j", workflowConfig.name, job.id, job.data );
+        job.current_attempt = Number(job._attempts)+1 || 1;
+        job.last_attempt = (job.current_attempt === Number(job._max_attempts));
+        var wf = new Workflow( util.extend(true, {}, workflowConfig ), {
             name: workflowConfig.name,
             job: job
         });
-    //	wf.data.job = job;
-    //	wf.data.done = done;
+        self.workflow_job_map[ job.id ] = wf;
         wf.on( 'completed', self.onCompleted(job,done).bind( self ) );
         wf.on( 'failed', self.onFailed(job,done).bind( self ) );
         wf.run();
-        self.workflow_job_map[ job.id ] = wf;
     });
-    if( workflowConfig.cancelable ) {
-        self.process_cancels( workflowConfig );
-    }
 
+//    if( workflowConfig.cancelable ) {
+        self.process_cancels( workflowConfig );
+//    }
 };
 
 worker.prototype.process_cancels = function( config ) {
     var self = this;
-    opxi2.taskq.process( 'cancel-' + config.name, config.concurrency, function (job, done) {
+    opxi2.taskq.process( 'cancel-' + config.name, config.concurrency, function(job, done) {
         if( !job.data.job_id ) {
             return done( {error: true, message: "No job_id specified." } );
         }
         var wf = self.workflow_job_map[ job.data.job_id ];
         if( wf ) {
-            console.log("Canceling workflow %s ", wf.id );
+            console.log("Canceling workflow %s with id %s ", config.name, wf.id );
             wf.tasks.forEach( function( task ){
                 task.cancel();
             });
             done();
         } else {
-            done( {error: true, message: "No workflow available for " + job.data.job_id } );
+            // TODO remove job_id if it is in delay mode!!!
+            opxi2.kue.Job.get( job.data.job_id, function( err, to_be_canceled_job ){
+                if( err ) {
+                    return done( {error: true, message: "No workflow/job to be canceled for job id " + job.data.job_id } );
+                }
+                // should we check to_be_canceled_job.toJSON().state == "delayed" !?
+                console.log("Canceling Job %s (in state %s) with id %s ", config.name, to_be_canceled_job.toJSON().state, job.data.job_id );
+                to_be_canceled_job.error( "Canceled" );
+                to_be_canceled_job.failed();
+                done();
+                /*job.remove( function() {
+                    console.log("Deleted Job %s with id %s ", config.name, job.data.job_id );
+                    done();
+                });*/
+            });
         }
     });
 };
@@ -85,31 +97,47 @@ worker.prototype.onCompleted = function( job, done ) {
     return function( wf ) {
         if( wf.$backdata ) {
             var result = this.getProperty( wf.data, wf.$backdata );
-            console.log( "Worker %s completed with data %j=%j", wf.name, wf.$backdata, result );
             var check = result, checkName = wf.$backdata;
             if( wf.$failcheck ) {
                 check = this.getProperty( wf.data, wf.$failcheck );
                 checkName = wf.$failcheck;
             }
             if ( !Workflow.isEmpty(check) ) {
+                console.log( "Worker flow %s completed with backdata %j=%j", wf.name, wf.$backdata, result );
+//                result.flow = wf;
                 job.set( 'data' , JSON.stringify(result), done );
             } else {
-                job.set( 'data' , JSON.stringify(result), function(){
-                    done( { error: true, message: 'Job back data failed for '+checkName, flowId: wf.id } );
-                });
-
+                if( job.last_attempt ) {
+                    var errMsg = { error: true, message: 'Worker '+job.type+', backdata '+checkName+' failed' };
+                    console.log( "Worker flow %s backdata failed %j=%j, set last attempt data=", wf.name, checkName, check, util.extend( true, errMsg, result ) );
+                    job.set( 'data' , JSON.stringify( util.extend( true, errMsg, result ) ), done );
+                } else {
+                    console.log( "Worker flow %s backdata failed %j=%j, but is not its last attempt", wf.name, checkName, check );
+                    done( { error: true, message: 'Worker '+job.type+', backdata '+checkName+' failed' } );
+                }
             }
         } else {
-            job.set( 'data' , JSON.stringify({job_id: job.id}), done );
+            console.log( "Worker flow %s completed: %j", wf.name, {job_id: job.id} );
+            job.set( 'data' , JSON.stringify({
+//                flow: wf,
+                job_id: job.id
+            }), done );
         }
-
     }.bind( this );
 };
 
 worker.prototype.onFailed = function( job, done ) {
     return function( wf ) {
-        console.log( "Failed workflow '%j'", wf.id );
-        done( { error: true, message: 'flow '+wf.id+' failed: ' + wf.error, flowId: wf.id } );
+        console.log( "Worker flow %s failed: ", job.type );
+        var err = wf.error;
+        if( err && err.length && err.split ) {
+            err = { error: true, message: job.type + ': ' + wf.error };
+        } else if( err && err.error == undefined ) {
+            err = { error: true, message: job.type + ': ' + JSON.stringify( err ) };
+        } else if( !err ) {
+            err = { error: true, message: job.type + " flow with id "+wf.id+" failed"};
+        }
+        job.set( 'data' , JSON.stringify( err ), done );
     }.bind( this );
 };
 

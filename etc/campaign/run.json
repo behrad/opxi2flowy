@@ -19,11 +19,6 @@
         "message": "{$job.data}"
     },
     {
-        "if": "{$campaign}",
-        "$function": "console.print",
-        "$args": [ "Process Campaign ", "{$job.data}", "{$campaign}" ]
-    },
-    {
         "$class": "redis",
         "$method": "pages",
         "key": "{$campaign.targets}",
@@ -50,7 +45,7 @@
             },
             {
                 "$every": "[*destinations]",
-                "$collect": "outbound_job_id",
+                "$collect": "outbound_job",
                 "$tasks": [
                     {
                         "$class": "message",
@@ -64,7 +59,7 @@
                         "$class": "job",
                         "name": "outbound-msg",
                         "data": "[*msg]",
-                        "$set": "outbound_job_id"
+                        "$set": "outbound_job"
                     }
                 ],
                 "$set": "outbound_job_ids"

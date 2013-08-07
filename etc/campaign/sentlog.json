@@ -1,5 +1,25 @@
 [
     {
+        "$function":"match",
+        "$origin":"{$channel}",
+        "$args": [ "[^.]+[^.]$" ],
+        "$set": "matched"
+    },
+    {
+        "if": "{$matched}",
+        "$function":"shift",
+        "$origin":"{$matched}",
+        "$set": "status"
+    },
+    {
+        "$function":"indexOf",
+        "$origin":"{$status}",
+        "$args": [ "sent" ],
+        "$set": "others",
+        "$empty": "is_sent"
+    },
+    {
+        "if": "{$is_sent}",
         "$class": "couch",
         "$method": "get",
         "id": "{$message}",

@@ -22,6 +22,9 @@ util.extend( couch.prototype, {
 //	    self.emit( 'warn', 'CouchDB logger got ' + self.doc );
         var newDoc = {};
         newDoc.extend( self.doc );
+        if( !newDoc.created_at ) {
+            newDoc.created_at = new Date().getTime();
+        }
         if( newDoc._id || self.id ) {
             var id = newDoc._id || self.id;
             delete newDoc._id;

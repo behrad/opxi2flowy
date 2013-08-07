@@ -1,6 +1,7 @@
 [
     {
         "$class": "uuid",
+        "service": "couchdb",
         "$set": "uuid"
     },
     {
@@ -11,8 +12,14 @@
         "$set": "msgObj"
     },
     {
+        "$class": "message",
+        "$method": "as_logable",
+        "message": "{$msgObj}",
+        "$set": "loggable_msg"
+    },
+    {
         "$class": "couch",
-        "doc": "{$msgObj}",
+        "doc": "{$loggable_msg}",
         "$set": "msg_log"
     },
     {
@@ -23,12 +30,13 @@
         "if": "{$msg_log}",
         "$class": "message",
         "$method": "attach_body",
+        "retries": 2,
+        "important": true,
         "message": "{$msgObj}",
         "$set": "attached_msg_ready"
     },
     {
         "if": "{$attached_msg_ready}",
-        "important": true,
         "$class": "couch",
         "$method": "get",
         "id": "{$uuid}",
@@ -41,17 +49,23 @@
         "$set": "send_job"
     },
     {
-        "$class": "message",
-        "$method": "as_log",
-        "action": "send_job",
-        "data": "{$send_job}",
-        "$set": "logJson"
+        "$class": "util",
+        "$method": "set",
+        "base":  "{$msg_log}",
+        "name":  [ "ok", "send_job_id" ],
+        "value": [ true, "{$send_job}" ],
+        "$set": "log"
     },
     {
-        "if": "{$logJson}",
-        "$class": "couch",
-        "$method": "update",
-        "id": "{$uuid}",
-        "data": "{$logJson}"
+        "$class": "util",
+        "$method": "set",
+        "name":[ "id", "status", "sendId" ],
+        "value":[ ["{$uuid}"], ["send_job"], ["{$send_job}"] ],
+        "$set": "log_job_data"
+    },
+    {
+        "$class": "job",
+        "name": "{$msg.channel}-send-notify",
+        "data": "{$log_job_data}"
     }
 ]

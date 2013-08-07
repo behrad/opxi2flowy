@@ -1,0 +1,31 @@
+[
+    {
+        "$class": "couch",
+        "$method": "get",
+        "id": "{$message}",
+        "$set": "msglog"
+    },
+    {
+        "$function":"match",
+        "$origin":"{$channel}",
+        "$args": [ "[^.]+[^.]$" ],
+        "$set": "matched"
+    },{
+        "if": "{$matched}",
+        "$function":"shift",
+        "$origin":"{$matched}",
+        "$set": "status"
+    },
+    {
+        "if": "{$msglog.alarm_id}",
+        "$class": "atm_event",
+        "$method": "log_alarm",
+        "alarm_time": "{$msglog.created_at}",
+        "target": "{$msglog.to}",
+        "channel": "{$msglog.channel}",
+        "log": "{$status}",
+        "eventId": "{$msglog.alarm_id}",
+        "msgId": "{$message}",
+        "$set": "logged"
+    }
+]

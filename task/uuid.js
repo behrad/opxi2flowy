@@ -26,7 +26,6 @@ util.extend( uuidTask.prototype, {
     chance: function() {
         var weight = Number( this.weight ) || 0.5;
         var rand = Math.random();
-        console.log( "RAAAAAAAAAAAANDOM: " + rand );
         (rand <= weight) ? this.completed( rand <= weight ) : this.failed( rand ) ;
     },
 
