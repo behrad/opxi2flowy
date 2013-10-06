@@ -1,0 +1,15 @@
+[
+    {
+        "$class": "util",
+        "$method": "set",
+        "name": "id",
+        "value": "{$message}",
+        "$set": "job_data"
+    },
+    {
+        "$class": "job",
+        "name": "atm_event_notify",
+        "title": "Alarm Time Reached",
+        "data": "{$job_data}"
+    }
+]

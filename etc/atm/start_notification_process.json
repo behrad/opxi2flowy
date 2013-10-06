@@ -1,0 +1,45 @@
+[
+    {
+        "$class": "atm_event",
+        "id": "{$job.data.id}",
+        "$set": "failure"
+    },
+    {
+        "$class": "atm_event",
+        "$method": "is_good",
+        "event": "{$failure}",
+        "$set": "fixed",
+        "$empty": "not_fixed"
+    },
+    {
+        "if": "{$not_fixed}",
+        "$class": "atm_event",
+        "$method": "before_notification_delay",
+        "failure": "{$failure}",
+        "$set": "postpone",
+        "$empty": "run_now"
+    },
+    {
+        "if": "{$postpone}",
+        "$class": "atm_event",
+        "$method": "update",
+        "eventId":"{$failure.id}",
+        "estate": "wait_for_alarm",
+        "status":"Wait to alarm"
+    },
+    {
+        "if": "{$postpone}",
+        "$class": "job",
+        "name": "atm_failure_pre_notify",
+        "delay": "{$postpone}",
+        "title": "{$failure.alarm.title.trans.fa}",
+        "data": "{$failure}"
+    },
+    {
+        "if": "{$run_now}",
+        "$class": "job",
+        "name": "atm_failure_pre_notify",
+        "title": "{$failure.alarm.title.trans.fa}",
+        "data": "{$failure}"
+    }
+]

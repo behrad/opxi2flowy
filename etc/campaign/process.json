@@ -26,12 +26,36 @@
         "$set": "campaign"
     },
     {
+        "if": "{$campaignHash}",
+        "$class": "redis",
+        "$method": "llen",
+        "key": "{$campaignHash.targets}",
+        "$set": "targetsLength"
+    },
+    {
+        "$class": "util",
+        "$method": "set",
+        "base": "{$campaign}",
+        "name":["targetsLength"],
+        "value":["{$targetsLength}"],
+        "$set": "lengthSet"
+    },
+    {
+        "$if": "{$lengthSet}",
         "$class": "couch",
         "doc": "{$campaign}",
         "$set": "logResp"
     },
     {
-        "if": "{$logResp}",
+        "$class": "util",
+        "$method": "set",
+        "base": "{$campaign}",
+        "name":["_id"],
+        "value":["{$logResp.id}"],
+        "$set": "logged_campaign"
+    },
+    {
+        "if": "{$logged_campaign}",
         "$class": "job",
         "blocking": true,
         "name": "authorize-msg",

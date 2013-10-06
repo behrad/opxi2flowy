@@ -7,50 +7,22 @@
         "$set": "failure"
     },
     {
-        "if": "{$failure}",
-        "$function": "console.print",
-        "$args": ["Event Processed: ", "{$failure}"]
-    },
-    {
-        "if": "{$failure.good}",
-        "$class": "util",
-        "$method": "set",
-        "name":"job_id",
-        "value":"{$failure.job_id}",
-        "$set": "cancel_data"
-    },
-    {
-        "if": "{$failure.good}",
         "$class": "job",
-        "name": "cancel-atm_device_event",
-        "data": "{$cancel_data}"
+        "$method": "progress",
+        "job": "{$job}",
+        "level": 10
     },
     {
-        "if": "{$failure.good}",
-        "$class": "atm_event",
-        "$method": "update",
-        "eventId":"{$failure.id}",
-        "status":"alarm canceled"
-    },
-    {
-        "if": "{$failure.good}",
-        "$class": "util",
-        "$method": "clone",
-        "from":"{$failure}",
-        "$set": "failure_result"
-    },
-    {
-        "if": "{$failure.error}",
-        "$class": "util",
-        "$method": "clone",
-        "from":"{$failure}",
-        "$set": "failure_result"
+        "$class": "job",
+        "$method": "log",
+        "job": "{$job}",
+        "format": "Processed: %s",
+        "args": [ "{$failure}" ]
     },
     {
         "if": "{$failure.new}",
         "$class": "crm",
         "$method": "event_matches",
-        "retries": 1,
         "label": "alarmtime",
         "$set": "in_time",
         "$empty": "no_alarm"
@@ -69,102 +41,108 @@
         "$class": "atm_event",
         "$method": "update",
         "eventId":"{$failure.id}",
+        "estate": "not_alarm_time",
         "status":"Not in alarm time"
     },
     {
         "if": "{$no_alarm}",
-        "$class": "crm",
-        "$method": "wait_until",
-        "event": "alarmtime",
-        "$set": "in_time"
+        "$class": "job",
+        "$method": "log",
+        "job": "{$job}",
+        "format": "Waiting for alarm time"
+    },
+    {
+        "if": "{$no_alarm}",
+        "$class": "redis",
+        "$method": "sadd",
+        "set": "opxi2:crm_event_list:alarmtime",
+        "value": "{$failure.id}"
+    },
+
+    {
+        "if": "{$in_time}",
+        "$class": "util",
+        "$method": "clone",
+        "from": "{$failure}",
+        "$set": "failure_result"
     },
     {
         "if": "{$in_time}",
-        "$class": "atm_event",
-        "$method": "update",
-        "eventId":"{$failure.id}",
-        "status":"Wait to alarm"
+        "$class": "job",
+        "name": "atm_event_notify",
+        "title": "{$failure.alarm.title.trans.fa}",
+        "data": "{$failure}"
     },
+
     {
-        "if": "{$in_time}",
-        "$class": "wait",
-        "secs": "{$failure.alarm.postpone}",
-        "$set": "ready_to_alarm"
-    },
-    {
-        "if": "{$ready_to_alarm}",
-        "$class": "atm_event",
-        "$method": "is_good",
-        "eventId": "{$failure.id}",
-        "$set": "fixed",
-        "$empty": "not_fixed"
-    },
-    {
-        "if": "{$fixed}",
+        "if": "{$failure.update}",
         "$class": "util",
         "$method": "clone",
         "from":"{$failure}",
         "$set": "failure_result"
     },
     {
-        "if": "{$not_fixed}",
-        "$class": "atm_event",
-        "$method": "update",
-        "eventId":"{$failure.id}",
-        "status":"Queued to notify alarm"
-    },
-    {
-        "if": "{$not_fixed}",
-        "$class": "job",
-        "name": "atm_failure_notify",
-        "title": "{$failure.alarm.title}",
-        "blocking": true,
-        "$retries": "{$failure.alarm.tries}",
-        "data": "{$failure}",
-        "$set": "notification"
-    },
-    {
-        "if": ["{$notification}"],
-        "$class": "atm_event",
-        "$method": "update",
-        "eventId": "{$failure.id}",
-        "state": "Alarm finished",
-        "status": "alarm task finished"
-    },
-    {
-        "if": ["{$notification.not_fixed}"],
-        "$function": "console.print",
-        "$args": ["Waiting for last time: ", "{$failure.alarm.last_try_delay}"]
-    },
-    {
-        "if": ["{$notification.not_fixed}"],
+        "if": "{$failure.update}",
         "$class": "wait",
-        "secs": "{$failure.alarm.last_try_delay}",
-        "$set": "last_check_ready"
+        "secs": 2,
+        "$set": "ready_to_process_good"
     },
     {
-        "if": "{$last_check_ready}",
-        "$class": "atm_event",
-        "$method": "is_good",
-        "eventId": "{$failure.id}",
-        "$set": "fixed_now",
-        "$empty": "still_not_fixed"
+        "if": "{$ready_to_process_good}",
+        "$every": "{$failure.events}",
+        "$tasks":[
+            {
+                "if": "[*every.item.good]",
+                "$class": "util",
+                "$method": "set",
+                "name": ["job_id", "event"],
+                "value":["[*every.item.job_id]", "{$job.data}"],
+                "$set": "cancel_data"
+            },
+            {
+                "if": "[*cancel_data]",
+                "$class": "job",
+                "name": "cancel-atm_device_event",
+                "title": "[*every.item.job_id]",
+                "data": "[*cancel_data]",
+                "$set": "cancel_job"
+            },
+            {
+                "$class": "job",
+                "$method": "log",
+                "job": "{*job}",
+                "format": "cancel job: %s",
+                "args": [ "[*cancel_job]" ]
+            },
+            {
+                "if": "[*cancel_data]",
+                "$class": "atm_event",
+                "$method": "update",
+                "eventId": "[*every.item.id]",
+                "estate": "stopped",
+                "status": "fixed"
+            },
+            {
+                "if": "[*every.item.good]",
+                "$class": "util",
+                "$method": "clone",
+                "from": "[*every.item]",
+                "$set": "failure_result"
+            }
+        ]
     },
     {
-        "if": ["{$last_check_ready}", "{$still_not_fixed}"],
-        "$function": "console.print",
-        "$args": ["Mark this event as failure for branch ", "{$still_not_fixed}"]
+        "if": "{$failure.ignore}",
+        "$class": "util",
+        "$method": "clone",
+        "from":"{$failure}",
+        "$set": "failure_result"
     },
     {
-        "if": ["{$last_check_ready}", "{$still_not_fixed}"],
-        "$class": "atm_event",
-        "$method": "markfailed",
-        "eventId": "{$failure.id}"
-    },
-    {
-        "if": ["{$last_check_ready}", "{$still_not_fixed}"],
-        "$class": "job",
-        "name": "atm_supervisor_notify",
-        "data": "{$failure_result}"
+        "if": "{$failure.error_code}",
+        "$class": "util",
+        "$method": "clone",
+        "from":"{$failure}",
+        "$set": "failure_result"
     }
 ]

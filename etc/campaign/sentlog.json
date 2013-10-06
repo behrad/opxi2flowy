@@ -29,6 +29,7 @@
         "if": "{$msglog.campaign_id}",
         "$class": "redis",
         "$method": "getHash",
+        "retries": 3,
         "key": "{$msglog.campaign_id}",
         "$set": "campaignHash"
     },
@@ -43,11 +44,13 @@
         "if": "{$campaign}",
         "$class": "redis",
         "$method": "incr",
+        "retries": 3,
         "key": "{$campaign.sends}"
     },
     {
         "$class": "redis",
         "$method": "publish",
+        "retries": 3,
         "channel": "opxi2.campaign.change.{$msglog.campaign_id}",
         "message": "{$msglog.campaign_id}"
     }

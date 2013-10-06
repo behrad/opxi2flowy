@@ -32,6 +32,14 @@
         "$args": [ "No Destinations!: ", "{$campaign.targets}" ]
     },
     {
+        "if": "{$no_results}",
+        "$class": "redis",
+        "$method": "setValue",
+        "key": "{$job.data}",
+        "property": "status",
+        "value": "complete"
+    },
+    {
         "$every": "{$pages}",
         "$collect": "outbound_job_ids",
         "$tasks": [

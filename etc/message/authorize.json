@@ -13,14 +13,14 @@
     {
         "if": "{$auth.failed}",
         "$function": "console.print",
-        "$args": [ "Authorization Failed ", "{$job.data.from}" ]
+        "$args": [ "Authorization Failed ", "{$job.data.from}", "{$auth.failed}" ]
     },
     {
         "if": "{$auth.failed}",
         "retries": 2,
         "$class": "couch",
         "$method": "update",
-        "id": "{$job.data.id}",
+        "id": "{$job.data._id}",
         "data": "{$auth.failed}"
     },
     {
@@ -28,7 +28,7 @@
         "retries": 2,
         "$class": "couch",
         "$method": "update",
-        "id": "{$job.data.id}",
+        "id": "{$job.data._id}",
         "data": "{$auth.success}"
     }
 ]

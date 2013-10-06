@@ -31,9 +31,6 @@ util.extend( msg.prototype, {
 
     attach_body: function() {
         var self = this;
-        if( self.dont_attach ) {
-            return self.completed( self.message );
-        }
         this.message.attach_body( function( err, resp ){
             if( err ) return self.failed( err );
             return self.completed( resp );
@@ -63,7 +60,7 @@ util.extend( msg.prototype, {
     as_multi_dest: function() {
         var i = Number(this.index)-1 || 0;
         var msg = new Message( this.data );
-        console.log( "Going to send to destination ", i, typeof i );
+//        console.log( "Going to send to destination ", i, typeof i );
         msg.to = this.data.destinations[i].address;
         msg.channel = this.data.destinations[i].channel;
         msg.to_account_id = this.data.destinations[i].id;

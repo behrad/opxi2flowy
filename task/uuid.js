@@ -18,7 +18,7 @@ util.extend( uuidTask.prototype, {
                 self.completed( id );
             } catch( e ) {
                 console.error( e );
-                self.failed( {error: e } );
+                self.failed( e );
             }
         }, self.service );
     },

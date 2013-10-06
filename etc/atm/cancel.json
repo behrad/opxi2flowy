@@ -2,14 +2,16 @@
     {
         "$class": "util",
         "$method": "set",
-        "name":"job_id",
-        "value":"{$message}",
+        "name": ["job_id", "channel"],
+        "value": ["{$message}", "{$channel}"],
         "$set": "cancel_data"
     },
     {
         "$class": "job",
         "name": "cancel-atm_device_event",
-        "data": "{$cancel_data}"
+        "title": "Canceled By User",
+        "data": "{$cancel_data}",
+        "$set": "cancel_job"
     },
     {
         "$function":"match",
@@ -24,9 +26,17 @@
         "$set": "eventId"
     },
     {
+        "$class": "job",
+        "$method": "log",
+        "job": "{$job}",
+        "format": "cancel job: %s",
+        "args": [ "{$cancel_job}" ]
+    },
+    {
         "$class": "atm_event",
         "$method": "update",
         "eventId":"{$eventId}",
-        "status":"alarm canceled"
+        "estate": "stopped",
+        "status": "fixed"
     }
 ]

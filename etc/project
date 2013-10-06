@@ -5,30 +5,37 @@
 		"test": {
 			"initiator": [ "couch_changes", "redis_event", "worker" ]
 		},
-        "main": {
-            "initiator": [ "redis_event", "worker" ]
+        "all": {
+			"initiator": [ "couch_changes", "redis_event", "worker" ]
+		},
+        "worker": {
+            "initiator": [ "worker" ]
+        },
+        "worker2": {
+            "initiator": [ "worker" ]
+        },
+        "core": {
+            "initiator": [ "redis_event" ]
         }
 	},
 	"initiator":{
         "worker": {
             "workflows": [{
-                "name": "campaign-run",
-                "cancelable": true,
-                "concurrency": 3,
-                "$backdata": "cmp_jobs",
-                "tasks": "<campaign/run.json>"
-            },{
                 "name": "outbound-msg",
-                "concurrency": 30,
+                "concurrency": 60,
                 "$backdata": "log",
                 "tasks": "<message/outbound.json>"
             },{
                 "name": "outbound-notify-first",
-                "cancelable": true,
-                "concurrency": 5,
+                "concurrency": 50,
                 "$backdata": "log",
                 "$failcheck": "log.answered",
                 "tasks": "<message/outbound-notify-first.json>"
+            },{
+                "name": "campaign-run",
+                "concurrency": 5,
+                "$backdata": "cmp_jobs",
+                "tasks": "<campaign/run.json>"
             },{
                 "name": "authorize-msg",
                 "concurrency": 200,
@@ -36,10 +43,6 @@
                 "tasks": "<message/authorize.json>"
             },{
                 "name": "email-send-notify",
-                "concurrency": 100,
-                "tasks": "<message/send-notify.json>"
-            },{
-                "name": "voice-send-notify",
                 "concurrency": 100,
                 "tasks": "<message/send-notify.json>"
             },{
@@ -60,46 +63,50 @@
                 "tasks": "<message/delivery-notify.json>"
             },{
                 "name": "atm_device_event",
-                "concurrency": 500,
-                "cancelable": true,
+                "concurrency": 100,
                 "$backdata": "failure_result",
                 "tasks": "<atm/process.json>"
             },{
                 "name": "atm_failure_notify",
-                "concurrency": 500,
-                "cancelable": true,
-                "$backdata": "notification_status",
-                "$failcheck": "notification_status.fixed",
+                "concurrency": 50,
+                "$backdata": "alarm",
                 "tasks": "<atm/notify.json>"
             },{
                 "name": "atm_failure_alarm",
-                "concurrency": 500,
-                "cancelable": true,
+                "concurrency": 50,
                 "$backdata": "alarm_answered",
                 "tasks": "<atm/alarm.json>"
             },{
                 "name": "atm_supervisor_notify",
-                "concurrency": 100,
+                "concurrency": 50,
                 "tasks": "<atm/supervisory.json>"
+            },{
+                "name": "atm_event_notify",
+                "concurrency": 300,
+                "tasks": "<atm/start_notification_process.json>"
+            },{
+                "name": "atm_failure_pre_notify",
+                "concurrency": 100,
+                "tasks": "<atm/pre_notify.json>"
+            },{
+                "name": "atm_failure_post_notify",
+                "concurrency": 100,
+                "tasks": "<atm/post_notify.json>"
             }
 
 
 
             ,{
-                "name": "pauseable",
-                "concurrency": 2,
+                "name": "test_job",
+                "concurrency": 1,
+                "$backdata": "tt",
                 "tasks": [{
-                    "$class": "wait",
-                    "secs": 0,
-                    "$set": "next"
-                },{
-                    "if": "{$next}",
                     "$function": "JSON.parse",
                     "$args": "{\"finished\": true }",
                     "$set": "testresult"
                 },{
                     "$function": "console.print",
-					"$args": [ "New message: ", "{$testresult}" ]
+					"$args": [ "New message: ", "{$job.current_attempt}" ]
                 }]
             }
 
@@ -110,12 +117,6 @@
 
 		"redis_event": {
 			"workflows": [{
-				"pattern": "opxi2.campaign.start.*",
-				"tasks": "<campaign/process.json>"
-			},{
-				"pattern": "cancel.opxi2.campaign.start.*",
-				"tasks": "<campaign/cancel.json>"
-			},{
 				"pattern": "opxi2.outbound.*",
 				"tasks": "<campaign/msglog.json>"
 			},{
@@ -131,6 +132,12 @@
                 "pattern": "opxi2.outbound.*.delivery.*.delivered",
                 "tasks": "<campaign/successlog.json>"
 			},{
+				"pattern": "opxi2.campaign.start.*",
+				"tasks": "<campaign/process.json>"
+			},{
+				"pattern": "cancel.opxi2.campaign.start.*",
+				"tasks": "<campaign/cancel.json>"
+			},{
 				"pattern": "cancel.opxi2.atm.alarm.*",
 				"tasks": "<atm/cancel.json>"
 			},{
@@ -139,6 +146,9 @@
 			},{
                 "pattern": "opxi2.outbound.*.delivery.*",
                 "tasks": "<atm/alarm_send_log.json>"
+			},{
+                "pattern": "opxi2.crm.event.alarmtime",
+                "tasks": "<atm/start_failure_event.json>"
 			}
 
 
@@ -147,22 +157,26 @@
 				"pattern": "opxi2.df1.*.alo",
 				"tasks": [
                     {
-                        "$class": "crm",
-                        "$method": "cells",
-                        "sort_by": "customfields.alarm_priority",
-                        "query": "org_unit",
-                        "value": "4057",
-                        "$set": "branch_cells",
-                        "$empty": "no_cells"
+                        "$class": "atm_event",
+                        "id": "{$message}",
+                        "$set": "failure"
+                    },
+                    {
+                        "$class": "atm_event",
+                        "$method": "before_notification_delay",
+                        "failure": "{$failure}",
+                        "$set": "postpone"
                     },
                     {
                         "$function": "console.print",
-                        "$args": ["message ", "{$branch_cells}"]
+                        "$args": ["message ", "{$postpone}"]
                     }
             ]}
 
-
-
+            ,{
+				"pattern": "opxi2.test2.*",
+				"tasks": "<tests/every_scope.json>"
+            }
 
             ]
 		},

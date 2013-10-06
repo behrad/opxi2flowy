@@ -1,0 +1,31 @@
+[
+    {
+        "$class": "atm_event",
+        "$method": "is_good",
+        "eventId": "{$job.data.id}",
+        "$set": "fixed",
+        "$empty": "not_fixed"
+    },
+    {
+        "if": ["{$job.data.alarm.mark_failed}", "{$not_fixed}"],
+        "$class": "atm_event",
+        "$method": "markfailed",
+        "eventId": "{$job.data.id}"
+    },
+    {
+        "if": [ "{$not_fixed}" ],
+        "$class": "atm_event",
+        "$method": "update",
+        "eventId": "{$job.data.id}",
+        "estate": "stopped",
+        "status": "fix failed"
+    },
+    {
+        "if": [ "{$fixed}" ],
+        "$class": "atm_event",
+        "$method": "update",
+        "eventId": "{$job.data.id}",
+        "estate": "stopped",
+        "status": "fixed"
+    }
+]

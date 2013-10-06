@@ -1,0 +1,25 @@
+[
+    {
+        "$function":"Array",
+        "$args":[
+            "data", "must", "flow"
+        ],
+        "$set":"data"
+
+    },
+    {
+        "$every": "{$data}",
+        "$tasks":[
+            {
+                "$class": "wait",
+                "secs": 1,
+                "$set": "ok_with_me"
+            },
+            {
+                "if": "[*ok_with_me]",
+                "$function": "console.print",
+                "$args": ["Every item: ","[*every.item]"]
+            }
+        ]
+    }
+]

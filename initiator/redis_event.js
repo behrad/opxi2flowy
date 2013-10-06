@@ -53,29 +53,32 @@ redis_event.prototype.listen = function( workflowConfig ) {
                     channel: channel,
                     message: message
             });
+            console.log("Start flow %s(%s) on event %s", workflowConfig.pattern, wf.id, channel );
             //	wf.data.channel = channel;
             //	wf.data.pattern = pattern;
             //	wf.data.message = message;
             wf.run();
-            if( workflowConfig.cancelable ) {
-                var cancel_subscription = self.do_subscribe( 'cancel.' + channel /*+ '_' + message*/, {
+            /*if( workflowConfig.cancelable ) {
+                var cancel_subscription = self.do_subscribe( 'cancel.' + channel *//*+ '_' + message*//*, {
                     on_message: self.createCancelable( wf )
                 });
                 wf.on( 'failed', function( wf ){
                     cancel_subscription.punsubscribe();
                     cancel_subscription.end();
+                    cancel_subscription.quit();
                 });
                 wf.on( 'completed', function( wf ){
                     cancel_subscription.punsubscribe();
                     cancel_subscription.end();
+                    cancel_subscription.quit();
                 });
-            }
+            }*/
         },
         on_subscribe: function (pattern, count) {
-            console.log( "Subscribed to new messages on %s ", pattern );
+            console.log( "Subscribed to %s: %s ", pattern, count );
         },
         on_unsubscribe: function (pattern, count) {
-            console.log( "UnSubscribed to %s, %s", pattern, count );
+            console.log( "UnSubscribed to %s: %s", pattern, count );
         }
     });
 };
@@ -89,6 +92,7 @@ redis_event.prototype.createCancelable = function( workflow, sub ) {
 };
 
 redis_event.prototype.do_subscribe = function( pattern, params ) {
+//    console.log( "==================================== Create a redis client in redis_event ", pattern );
     var broker = opxi2.brokerClient();
     broker.on( "pmessage", params.on_message || this.noop );
     broker.on( "psubscribe", params.on_subscribe || this.noop );

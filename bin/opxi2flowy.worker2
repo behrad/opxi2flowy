@@ -33,7 +33,7 @@ NAME="Flow-based Messaging In Nodejs"
 DIR="/opt/opxi2/node_modules/opxi2flowy"
 SCRIPT_NAME="opxi2flowy"
 SCRIPT_FILE="node_modules/.bin/dataflows"
-ALL_SCRIPT="daemon all"
+WORKER_SCRIPT="daemon worker"
 FOREVER_DIR="/var/run/forever"
 LOGDIR=/var/log/opxi2
 LOCKFILE=`basename $0 .sh`
@@ -68,13 +68,13 @@ fi
 
 
 running() {
-    forever list 2>/dev/null | grep "${SCRIPT_FILE} ${ALL_SCRIPT}" 2>&1  >/dev/null
+    forever list 2>/dev/null | grep "${SCRIPT_FILE} ${WORKER_SCRIPT}" 2>&1  >/dev/null
     return $?
 }
 
 start_server() {
     cd ${DIR}
-    forever start -a -w -p ${FOREVER_DIR} -l ${LOGDIR}/${SCRIPT_NAME}.log --sourceDir ${DIR} ${SCRIPT_FILE} ${ALL_SCRIPT} 2>&1 >/dev/null
+    forever start -a -w -p ${FOREVER_DIR} -l ${LOGDIR}/${SCRIPT_NAME}.worker2.log --sourceDir ${DIR} ${SCRIPT_FILE} ${WORKER_SCRIPT} 2>&1 >/dev/null
     forever list
     return $?
 }

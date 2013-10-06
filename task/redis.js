@@ -1,10 +1,11 @@
 var task = require ('dataflo.ws/task/base'),
     opxi2 = require( 'opxi2node'),
     util = require( 'util' );
-
+    var redisConnection = opxi2.singletonBrokerClient();
 
 var redis = module.exports = function( config ) {
     this.init( config );
+    
 };
 
 util.inherits( redis, task );
@@ -19,17 +20,6 @@ util.extend( redis.prototype, {
         var self = this;
     },
 
-    createClient: function() {
-        var self = this;
-        var redis = opxi2.brokerClient();
-        redis.on( "error", function( err ) {
-            console.log( "Error " + err );
-            self.failed( err );
-            redis.quit();
-        });
-        return redis;
-    },
-
     /**
      * Get all keys in a redis hash
      * @key redis hash name
@@ -38,8 +28,7 @@ util.extend( redis.prototype, {
      * Returns an array of available page numbers for later page fetch!
      */
     pages: function() {
-        var redis = this.createClient();
-        redis.llen( this.key, this.errorHandler( redis, function( len ){
+        redisConnection.llen( this.key, this.errorHandler( redisConnection, function( len ){
             var pageSize = Number( this.pageSize ) || 100;
             var a = [];
             for( var i=1; i<=Math.ceil( len/pageSize ); i++ ) {
@@ -56,12 +45,11 @@ util.extend( redis.prototype, {
      * @pageSize
      */
     paged: function() {
-        var redis = this.createClient();
         var page = Number( this.page ) || 1;
         var pageSize = Number( this.pageSize ) || 100;
         var start = (page-1)*pageSize;
         var end = start + (pageSize-1);
-        redis.lrange( this.key, start, end, this.errorHandler( redis ) );
+        redisConnection.lrange( this.key, start, end, this.errorHandler( redisConnection ) );
     },
 
     /**
@@ -71,12 +59,11 @@ util.extend( redis.prototype, {
      * @value value to set under the name @property
      */
     setValue: function() {
-        var redis = this.createClient();
         var value = JSON.stringify( this.value );
         if( this.value.indexOf && this.value.split ) {
             value = this.value;
         }
-        redis.hset( this.key, this.property, value, this.errorHandler( redis ) );
+        redisConnection.hset( this.key, this.property, value, this.errorHandler( redisConnection ) );
     },
 
     /**
@@ -85,13 +72,11 @@ util.extend( redis.prototype, {
      * @data json object to store under the key
      */
     setHash: function() {
-        var redis = this.createClient();
-        redis.hmset( this.key, this.data, this.errorHandler( redis ) );
+        redisConnection.hmset( this.key, this.data, this.errorHandler( redisConnection ) );
     },
 
     set: function() {
-        var redis = this.createClient();
-        redis.set( this.key, this.value, this.errorHandler( redis ) );
+        redisConnection.set( this.key, this.value, this.errorHandler( redisConnection ) );
     },
 
     /**
@@ -99,14 +84,24 @@ util.extend( redis.prototype, {
      * @key redis hash name
      */
     getHash: function() {
-        var redis = this.createClient();
-        redis.hgetall( this.key, this.errorHandler( redis ));
+        redisConnection.hgetall( this.key, this.errorHandler( redisConnection ));
+    },
+
+    llen: function() {
+        var self = this;
+        redisConnection.llen( this.key, this.errorHandler( redisConnection, function( len ){
+            self.completed( Number(len) );
+        }) );
     },
 
     incr: function() {
-        var redis = this.createClient();
-        redis.incr( this.key, this.errorHandler( redis ));
+        redisConnection.incr( this.key, this.errorHandler( redisConnection ));
     },
+
+    sadd: function() {
+        redisConnection.sadd( this.set, this.value, this.errorHandler( redisConnection ));
+    },
+
 
     /**
      * Publishes a message in redis
@@ -116,8 +111,7 @@ util.extend( redis.prototype, {
      * return publish command response
      */
     publish: function() {
-        var redis = this.createClient();
-        redis.publish( this.channel, this.message, this.errorHandler( redis ) );
+        redisConnection.publish( this.channel, this.message, this.errorHandler( redisConnection ) );
     },
 
     /**
@@ -132,9 +126,9 @@ util.extend( redis.prototype, {
      */
     wait_first: function() {
         var self = this;
-        var redis = this.createClient();
+//        console.log( "==================================== Create a redis client in redis wait task " );
+        var redis = opxi2.brokerClient();
         self.on( 'cancel', function () {
-            console.log( "CANCEEL MY SUBSCRIPTION! " );
             redis.punsubscribe( self.pattern );
             redis.quit();
             redis.end();
@@ -158,7 +152,6 @@ util.extend( redis.prototype, {
             console.log( "Task unSubscribed to %s, remaining subs: %s", pattern, count );
         });
         redis.psubscribe( self.pattern );
-
         if( self.timeout ) {
             var timer = setTimeout( function(){
                 self.completed( { timeout: true } );
@@ -169,14 +162,10 @@ util.extend( redis.prototype, {
         }
     },
 
-    cancel: function() {
-//        console.log( "googooli" );
-    },
-
     errorHandler: function( redis, clbk ) {
         return function( err, obj ) {
-            redis.quit();
-            redis.end();
+//            redis.quit();
+//            redis.end();
             if( err ) {
                 return this.failed( err );
             }

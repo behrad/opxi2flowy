@@ -14,6 +14,10 @@ util.extend( sleepTask.prototype, {
         var timer = setTimeout( function () {
             self.completed( 1 );
         }, Number( self.secs ) * 1000 );
+        self.on( 'cancel', function () {
+//            console.log( "Clear wait timer(%d secs): ", self.secs, timer );
+            clearTimeout( timer );
+        }.bind( self ) );
     }
 
 });

@@ -47,6 +47,7 @@
                 "if": "[*posting_log.posting]",
                 "$class": "redis",
                 "$method": "publish",
+                "retries": 3,
                 "channel": "[*publish_channel]",
                 "message": "[*every.item]"
             }

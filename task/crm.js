@@ -1,4 +1,5 @@
 var task = require ('dataflo.ws/task/base'),
+    opxi2 = require( 'opxi2node' ),
     crm = require( 'opxi2crm' ),
     util = require( 'util' );
 
@@ -12,7 +13,7 @@ util.inherits( msg, task );
 util.extend( msg.prototype, {
 
     run: function () {
-        return self.failed( { error: "Not Implemented" } );
+        return this.failed( "Not Implemented" );
     },
 
     search: function( clbk ) {
@@ -21,14 +22,14 @@ util.extend( msg.prototype, {
         filter[self.query] = self.value;
         crm.search( filter, function( err, contacts ){
             if( err ) {
-                return self.failed( { error: err } );
+                return self.failed( err );
             }
             if( self.sort_by ) {
                 contacts.sort( self.get_sorter( self.sort_by ) );
             }
             clbk && clbk( err, contacts, function(err, transformed){
                 if( err ) {
-                    return self.failed( { error: err } );
+                    return self.failed( err );
                 }
                 return self.completed( transformed );
             });
@@ -51,8 +52,7 @@ util.extend( msg.prototype, {
         var self = this;
         crm.is_authorized( self.message, function( err, auth_resp ) {
             if( err ) {
-                console.log( "err: ", err );
-                return self.failed( { error: err } );
+                return self.failed( err );
             }
             return self.completed( auth_resp );
         });
@@ -124,24 +124,33 @@ util.extend( msg.prototype, {
     event_matches: function() {
         var self = this;
         crm.event_matches( self.label, function( err, matched ) {
+//            console.log( "event_matches %s returned: ", self.flow_id, err, matched );
             if( err ) {
-                console.log( "err: ", err );
-                return self.failed( { error: err } );
+                return self.failed( err );
             }
             self.completed( matched );
         });
     },
 
-    wait_until: function() {
+    /*wait_until: function() {
         var self = this;
-        crm.wait_until( self.event, function( err, matched ) {
-            if( err ) {
-                console.log( "err: ", err );
-                return self.failed( { error: err } );
-            }
-            self.completed( matched );
-        });
-    },
+        var timeout = self.poll_timeout ? self.poll_timeout*1000 : 5000;
+        var poller = setInterval( function() {
+            crm.wait_until( self.event, function( err, matched ) {
+                if( err ) {
+                    console.log( "Error: ", err );
+                    return self.failed( err );
+                }
+                if( matched ) {
+                    clearInterval( poller );
+                    self.completed( matched );
+                }
+            });
+        }, timeout );
+        self.on( 'cancel', function () {
+            clearInterval( poller );
+        }.bind( self ) );
+    },*/
 
     getProperty: function (obj, path) {
         var val = obj;

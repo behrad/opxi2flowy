@@ -1,5 +1,6 @@
 var task = require('dataflo.ws/task/base'),
     moment = require('moment'),
+    j = require('opxi2node/lib/jalali'),
     util = require('util');
 
 
@@ -10,6 +11,29 @@ var momentT = module.exports = function (config) {
 util.inherits( momentT, task );
 
 util.extend( momentT.prototype, {
+
+    jalali_str: function() {
+        var self = this;
+        var base_date = self.date;
+        if( !self.date ) {
+            base_date = new Date();
+        } else if( self.date.split ) {
+            base_date = new Date( self.date );
+        }
+        var jdate = j.gregorian_to_jalali( [base_date.getFullYear(), base_date.getMonth()+1, base_date.getDate()] );
+        return self.completed( jdate.join( '/' ) );
+    },
+
+    time_str: function() {
+        var base_date = this.date;
+        var format = this.format || 'LT';
+        if( !this.date ) {
+            base_date = new Date();
+        } else if( this.date.split ) {
+            base_date = new Date( this.date );
+        }
+        return this.completed( moment( base_date ).format( format ) );
+    },
 
     run: function () {
         var self = this;

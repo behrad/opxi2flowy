@@ -1,0 +1,42 @@
+[
+    {
+        "$class": "atm_event",
+        "$method": "is_good",
+        "eventId": "{$job.data.id}",
+        "$set": "fixed",
+        "$empty": "not_fixed"
+    },
+    {
+        "if": "{$fixed}",
+        "$class": "util",
+        "$method": "clone",
+        "from":"{$job.data}",
+        "$set": "failure_result"
+    },
+    {
+        "if": "{$not_fixed}",
+        "$class": "atm_event",
+        "$method": "update",
+        "eventId":"{$job.data.id}",
+        "estate": "queued",
+        "status":"Queued to notify alarm"
+    },
+    {
+        "if": "{$not_fixed}",
+        "$class": "util",
+        "$method": "set",
+        "base": "{$job.data}",
+        "name": [ "parent_job_id" ],
+        "value": [ "{$job.id}" ],
+        "$set": "failure_updated"
+    },
+    {
+        "if": "{$failure_updated}",
+        "$class": "job",
+        "name": "atm_failure_notify",
+        "title": "{$job.data.alarm.title.trans.fa}",
+        "$priority": "{$job.data.alarm.priority}",
+        "data": "{$job.data}",
+        "$set": "notify_job"
+    }
+]

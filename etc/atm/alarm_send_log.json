@@ -6,6 +6,7 @@
         "$set": "msglog"
     },
     {
+        "if": "{$msglog.alarm_id}",
         "$function":"match",
         "$origin":"{$channel}",
         "$args": [ "[^.]+[^.]$" ],

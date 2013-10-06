@@ -1,11 +1,15 @@
 [
     {
+        "$class": "atm_event",
+        "$method": "format_irar_time",
+        "$set": "current_time"
+    },
+    {
         "$class": "util",
         "$method": "set",
         "base": "{$change.doc}",
-        "name":["error"],
-        "value":[true],
-        "$set": "alarm_answered"
+        "name":[ "LOG_DATE_TIME" ],
+        "value":[ "{$current_time}" ]
     },
     {
         "$class": "job",

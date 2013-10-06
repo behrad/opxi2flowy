@@ -32,6 +32,13 @@
         "$empty": "no_phones"
     },
     {
+        "if": [ "{$off_work}" ],
+        "$class": "job",
+        "$method": "log",
+        "job": "{$job}",
+        "format": "Off work, try to add home phone numbers"
+    },
+    {
         "if": "{$at_work}",
         "$class": "crm",
         "$method": "phones",
@@ -42,12 +49,26 @@
         "$empty": "no_phones"
     },
     {
+        "if": [ "{$at_work}" ],
+        "$class": "job",
+        "$method": "log",
+        "job": "{$job}",
+        "format": "Off work, try to add branch phone numbers"
+    },
+    {
         "if": [ "{$no_cells}", "{$no_phones}" ],
         "$class": "util",
         "$method": "set",
         "name":["error", "message"],
         "value":[true, "No Contact Addresses"],
         "$set": "alarm_answered"
+    },
+    {
+        "if": [ "{$no_cells}", "{$no_phones}" ],
+        "$class": "job",
+        "$method": "log",
+        "job": "{$job}",
+        "format": "No Contact Addresses"
     },
     {
         "if": [ "{$branch_cells}", "{$branch_phones}"],
@@ -91,26 +112,60 @@
         "$set": "atm"
     },
     {
+        "$class": "atm_event",
+        "id": "{$job.data.id}",
+        "$set": "event"
+    },
+    {
+        "$class": "moment",
+        "$method": "time_str",
+        "date": "{$event.failure_time}",
+        "$set":"time"
+    },
+    {
+        "$class": "moment",
+        "$method": "jalali_str",
+        "date": "{$event.failure_time}",
+        "$set":"jalali_date"
+    },
+    {
         "$class": "util",
         "$method": "set",
-        "name":[ "atm" ],
-        "value":[ "{$atm}" ],
+        "base": "{$event}",
+        "name":[ "time", "jalali_date" ],
+        "value":[ "{$time}", "{$jalali_date}" ],
+        "$set": "ready"
+    },
+    {
+        "if": "{$ready}",
+        "$class": "util",
+        "$method": "set",
+        "name":[ "atm", "event" ],
+        "value":[ "{$atm}", "{$event}" ],
         "$set": "context_data"
     },
     {
         "$class": "util",
         "$method": "set",
         "base": "{$multi_msg_alarm}",
-        "name":["__context_data"],
-        "value":["{$context_data}"],
+        "name":["__context_data", "dont_attach" ],
+        "value":["{$context_data}", true ],
         "$set": "final_msg"
+    },
+    {
+        "if": [ "{$final_msg}" ],
+        "$class": "job",
+        "$method": "log",
+        "job": "{$job}",
+        "format": "Create notify job to list of %s destinations",
+        "args": "{$branch_contacts.length}"
     },
     {
         "$class": "job",
         "name": "outbound-notify-first",
         "blocking": true,
         "$retries": "{$branch_contacts.length}",
-        "$priority": "high",
+        "$priority": "{$job._priority}",
         "data": "{$final_msg}",
         "$set": "alarm_answered"
     }

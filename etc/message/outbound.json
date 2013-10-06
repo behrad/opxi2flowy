@@ -1,7 +1,6 @@
 [
     {
         "$class": "uuid",
-        "service": "couchdb",
         "$set": "uuid"
     },
     {
@@ -23,8 +22,11 @@
         "$set": "msg_log"
     },
     {
-        "$function": "console.print",
-        "$args": [ "Msg log: ", "{$msg_log}" ]
+        "$class": "job",
+        "$method": "log",
+        "job": "{$job}",
+        "format": "Message Logged %s",
+        "args": [ "{$msg_log.id}" ]
     },
     {
         "if": "{$msg_log}",
@@ -45,7 +47,9 @@
     {
         "$class": "job",
         "name": "send-{$msg.channel}",
-        "data": "{$msg}",
+        "title": "{$attached_msg_ready.to}",
+        "data": "{$attached_msg_ready}",
+        "$priority": "{$job._priority}",
         "$set": "send_job"
     },
     {
@@ -66,6 +70,7 @@
     {
         "$class": "job",
         "name": "{$msg.channel}-send-notify",
+        "title": "{$attached_msg_ready.to}",
         "data": "{$log_job_data}"
     }
 ]
