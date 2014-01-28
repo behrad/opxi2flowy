@@ -1,0 +1,113 @@
+[
+    {
+        "if": "{$job.data.id}",
+        "$class": "atm_event",
+        "id": "{$job.data.id}",
+        "$set": "failure"
+    },
+    {
+        "if": "{$failure.good}",
+        "$class": "util",
+        "$method": "set",
+        "name": ["job_id", "event"],
+        "value":["{$failure.data.job_id}", "{$job.data}"],
+        "$set": "cancel_data"
+    },
+    {
+        "if": "{$cancel_data}",
+        "$class": "job",
+        "name": "cancel-atm_device_event",
+        "$priority": 15,
+        "title": "{$failure.data.job_id}",
+        "data": "{$cancel_data}",
+        "$set": "cancel_job"
+    },
+    {
+        "$class": "job",
+        "$method": "log",
+        "job": "{$job}",
+        "format": "cancel job: %s",
+        "args": [ "{$cancel_job}" ]
+    },
+    {
+        "if": "{$failure.good}",
+        "$class": "util",
+        "$method": "set",
+        "name": ["job_id", "event"],
+        "value":["{$failure.data.notify_job_id}", "{$job.data}"],
+        "$set": "cancel2_data"
+    },
+    {
+        "if": "{$cancel2_data}",
+        "$class": "job",
+        "name": "cancel-atm_failure_notify",
+        "title": "{$failure.data.notify_job_id}",
+        "data": "{$cancel2_data}",
+        "$set": "cancel_job2"
+    },
+    {
+        "$class": "job",
+        "$method": "log",
+        "job": "{$job}",
+        "format": "notify cancel job: %s",
+        "args": [ "{$cancel_job2}" ]
+    },
+    {
+        "if": "{$failure.good}",
+        "$class": "util",
+        "$method": "set",
+        "name": ["job_id", "event"],
+        "value":["{$failure.data.pre_notify_job_id}", "{$job.data}"],
+        "$set": "cancel3_data"
+    },
+    {
+        "if": "{$cancel3_data}",
+        "$class": "job",
+        "name": "cancel-atm_failure_pre_notify",
+        "title": "{$failure.data.pre_notify_job_id}",
+        "data": "{$cancel3_data}",
+        "$set": "cancel_job3"
+    },
+    {
+        "$class": "job",
+        "$method": "log",
+        "job": "{$job}",
+        "format": "pre_notify cancel job: %s",
+        "args": [ "{$cancel_job3}" ]
+    },
+    {
+        "if": "{$failure.good}",
+        "$class": "util",
+        "$method": "set",
+        "name": ["job_id", "event"],
+        "value":["{$failure.data.post_notify_job_id}", "{$job.data}"],
+        "$set": "cancel4_data"
+    },
+    {
+        "if": "{$cancel4_data}",
+        "$class": "job",
+        "name": "cancel-atm_failure_post_notify",
+        "title": "{$failure.data.post_notify_job_id}",
+        "data": "{$cancel4_data}",
+        "$set": "cancel_job4"
+    },
+    {
+        "$class": "job",
+        "$method": "log",
+        "job": "{$job}",
+        "format": "post_notify cancel job: %s",
+        "args": [ "{$cancel_job4}" ]
+    },
+    {
+        "$class": "redis",
+        "$method": "srem",
+        "set": "opxi2:crm_event_list:alarmtime",
+        "value": "{$failure.id}"
+    },
+    {
+        "$class": "atm_event",
+        "$method": "update",
+        "eventId": "{$failure.id}",
+        "estate": "stopped"
+    }
+]

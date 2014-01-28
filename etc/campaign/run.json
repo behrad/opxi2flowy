@@ -66,6 +66,8 @@
                     {
                         "$class": "job",
                         "name": "outbound-msg",
+                        "$retries": 3,
+                        "$priority": 1,
                         "data": "[*msg]",
                         "$set": "outbound_job"
                     }

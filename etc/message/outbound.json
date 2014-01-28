@@ -50,6 +50,7 @@
         "title": "{$attached_msg_ready.to}",
         "data": "{$attached_msg_ready}",
         "$priority": "{$job._priority}",
+	    "$retries": 2,
         "$set": "send_job"
     },
     {

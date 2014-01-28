@@ -33,13 +33,22 @@
         "name": "atm_failure_pre_notify",
         "delay": "{$postpone}",
         "title": "{$failure.alarm.title.trans.fa}",
-        "data": "{$failure}"
+        "data": "{$failure}",
+        "$set": "new_job_id"
     },
     {
         "if": "{$run_now}",
         "$class": "job",
         "name": "atm_failure_pre_notify",
         "title": "{$failure.alarm.title.trans.fa}",
-        "data": "{$failure}"
+        "data": "{$failure}",
+        "$set": "new_job_id"
+    },
+    {
+        "if": [ "{$new_job_id}" ],
+        "$class": "atm_event",
+        "$method": "update",
+        "eventId": "{$job.data.id}",
+        "pre_notify_job_id": "{$new_job_id}"
     }
 ]

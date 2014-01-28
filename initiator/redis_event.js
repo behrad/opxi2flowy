@@ -48,12 +48,12 @@ redis_event.prototype.listen = function( workflowConfig ) {
     this.do_subscribe( workflowConfig.pattern, {
         on_message: function ( pattern, channel, message ) {
             var wf = new Workflow(
-                util.extend (true, {}, workflowConfig ), {
+                util.extend (true, {quiet: !opxi2.CONFIG.flows.verbose}, workflowConfig ), {
                     pattern: pattern,
                     channel: channel,
                     message: message
             });
-            console.log("Start flow %s(%s) on event %s", workflowConfig.pattern, wf.id, channel );
+            opxi2.log("Start flow %s(%s) on event %s", workflowConfig.pattern, wf.id, channel );
             //	wf.data.channel = channel;
             //	wf.data.pattern = pattern;
             //	wf.data.message = message;
@@ -75,10 +75,10 @@ redis_event.prototype.listen = function( workflowConfig ) {
             }*/
         },
         on_subscribe: function (pattern, count) {
-            console.log( "Subscribed to %s: %s ", pattern, count );
+            opxi2.log( "Subscribed to %s: %s ", pattern, count );
         },
         on_unsubscribe: function (pattern, count) {
-            console.log( "UnSubscribed to %s: %s", pattern, count );
+            opxi2.log( "UnSubscribed to %s: %s", pattern, count );
         }
     });
 };
@@ -92,7 +92,7 @@ redis_event.prototype.createCancelable = function( workflow, sub ) {
 };
 
 redis_event.prototype.do_subscribe = function( pattern, params ) {
-//    console.log( "==================================== Create a redis client in redis_event ", pattern );
+//    opxi2.log( "==================================== Create a redis client in redis_event ", pattern );
     var broker = opxi2.brokerClient();
     broker.on( "pmessage", params.on_message || this.noop );
     broker.on( "psubscribe", params.on_subscribe || this.noop );

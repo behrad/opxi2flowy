@@ -14,7 +14,7 @@
     {
         "$class": "job",
         "name": "atm_device_event",
-        "$priority": "high",
+        "$priority": 15,
         "data": "{$change.doc}"
     }
 ]

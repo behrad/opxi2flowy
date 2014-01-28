@@ -1,19 +1,5 @@
 [
     {
-        "$class": "util",
-        "$method": "set",
-        "name": ["job_id", "channel"],
-        "value": ["{$message}", "{$channel}"],
-        "$set": "cancel_data"
-    },
-    {
-        "$class": "job",
-        "name": "cancel-atm_device_event",
-        "title": "Canceled By User",
-        "data": "{$cancel_data}",
-        "$set": "cancel_job"
-    },
-    {
         "$function":"match",
         "$origin":"{$channel}",
         "$args": [ "[^.]*[^.]$" ],
@@ -26,17 +12,23 @@
         "$set": "eventId"
     },
     {
+        "if": "[*every.item.good]",
+        "$class": "util",
+        "$method": "set",
+        "name": ["id"],
+        "value":["{$eventId}"],
+        "$set": "cancel_data"
+    },
+    {
         "$class": "job",
-        "$method": "log",
-        "job": "{$job}",
-        "format": "cancel job: %s",
-        "args": [ "{$cancel_job}" ]
+        "name": "atm_failure_cancel",
+        "title": "{$eventId}",
+        "data": "{$cancel_data}"
     },
     {
         "$class": "atm_event",
         "$method": "update",
         "eventId":"{$eventId}",
-        "estate": "stopped",
-        "status": "fixed"
+        "status": "alarm canceled"
     }
 ]

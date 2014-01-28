@@ -9,7 +9,7 @@
 var opxi2 = require( 'opxi2node' );
 var i = 0;
 
-opxi2.taskq.process( "test_job", 200, function (job, done) {
+opxi2.taskq.process( "test_job", 10, function (job, done) {
     job.current_attempt = Number(job._attempts)+1 || 1;
     console.log("Receive job %s(%s): %j", "test_job", job.id, job.current_attempt , new Date() );
     if( ++i < 3 ) {

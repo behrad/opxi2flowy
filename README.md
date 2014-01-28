@@ -22,3 +22,8 @@ Installation
 `npm install .`
 
 `#sudo npm link`
+
+Read Log Files
+==============
+sed -r "s/\x1B\[([0-9]{1,2}(;[0-9]{1,2})?)?[m|K]//g" FILE
+sed -n -e 120p FILE

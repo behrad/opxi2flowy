@@ -1,15 +1,43 @@
 [
     {
-        "$class": "util",
-        "$method": "set",
-        "name": "id",
-        "value": "{$message}",
-        "$set": "job_data"
+        "$function":"join",
+        "$origin":[ "opxi2:crm_event_list:", "{$message}" ],
+        "$args":[""],
+        "$set":"set_name"
     },
     {
-        "$class": "job",
-        "name": "atm_event_notify",
-        "title": "Alarm Time Reached",
-        "data": "{$job_data}"
+        "$class": "redis",
+        "$method": "smembers",
+        "set": "{$set_name}",
+        "$set": "pending_failure_ids"
+    },
+    {
+        "if": "{$pending_failure_ids}",
+        "$class": "redis",
+        "$method": "srem",
+        "set": "{$set_name}",
+        "value": "{$pending_failure_ids}"
+    },
+    {
+        "if": "{$pending_failure_ids}",
+        "$every": "{$pending_failure_ids}",
+        "$collect": "job_id",
+        "$tasks":[
+            {
+                "$class": "util",
+                "$method": "set",
+                "name": "id",
+                "value": "[*every.item]",
+                "$set": "job_data"
+            },
+            {
+                "$class": "job",
+                "name": "atm_event_notify",
+                "title": "Alarm Time Reached",
+                "data": "[*job_data]",
+                "$set": "job_id"
+            }
+        ],
+        "$set": "job_ids"
     }
 ]

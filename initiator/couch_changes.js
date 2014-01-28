@@ -53,9 +53,9 @@ couchChanges.prototype.listen = function( workflowConfig ) {
             util.extend (true, {}, workflowConfig ), {
                 change: change
         });
-        console.log("Start flow %s for change %j", wf.id, change );
+        opxi2.log("Start flow %s for change %j", wf.id, change );
         wf.run();
     });
-    console.log( "Listening for changes: %j", opxi2.db );
+    opxi2.log( "Listening for changes: %j", opxi2.db );
     feed.follow();
 };

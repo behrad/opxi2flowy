@@ -37,6 +37,13 @@
         "title": "{$job.data.alarm.title.trans.fa}",
         "$priority": "{$job.data.alarm.priority}",
         "data": "{$job.data}",
-        "$set": "notify_job"
+        "$set": "new_job_id"
+    },
+    {
+        "if": [ "{$failure_updated}" ],
+        "$class": "atm_event",
+        "$method": "update",
+        "eventId": "{$job.data.id}",
+        "notify_job_id": "{$new_job_id}"
     }
 ]

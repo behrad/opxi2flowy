@@ -32,7 +32,7 @@ DESC="Opxi2"
 NAME="Flow-based Messaging In Nodejs"
 DIR="/opt/opxi2/node_modules/opxi2flowy"
 SCRIPT_NAME="opxi2flowy"
-SCRIPT_FILE="node_modules/.bin/dataflows"
+SCRIPT_FILE="opxi2flowy.js"
 ALL_SCRIPT="daemon all"
 FOREVER_DIR="/var/run/forever"
 LOGDIR=/var/log/opxi2
@@ -68,13 +68,13 @@ fi
 
 
 running() {
-    forever list 2>/dev/null | grep "${SCRIPT_FILE} ${ALL_SCRIPT}" 2>&1  >/dev/null
+    forever list 2>/dev/null | grep "${SCRIPT_FILE}" 2>&1  >/dev/null
     return $?
 }
 
 start_server() {
     cd ${DIR}
-    forever start -a -w -p ${FOREVER_DIR} -l ${LOGDIR}/${SCRIPT_NAME}.log --sourceDir ${DIR} ${SCRIPT_FILE} ${ALL_SCRIPT} 2>&1 >/dev/null
+    forever start -m 1000 --minUptime 2000 --spinSleepTime 2000 -a -p ${FOREVER_DIR} --pidFile ${SCRIPT_NAME}.pid -l ${LOGDIR}/${SCRIPT_NAME}.log --sourceDir ${DIR} ${SCRIPT_FILE} 2>&1 >/dev/null
     forever list
     return $?
 }
@@ -84,6 +84,9 @@ stop_server() {
     return $?
 }
 
+restart_server() {
+    kill `cat /root/.forever/pids/${SCRIPT_NAME}.pid`
+}
 ################################################################################
 ################################################################################
 ##                                                                            ##
@@ -180,15 +183,7 @@ case "$1" in
         exit $RETVAL
 	;;
     restart)
-	stop_server
-        RETVAL=$?
-	if [ $RETVAL -eq 0 ]; then
-            # Wait some sensible amount, some server need this
-            [ -n "$DIETIME" ] && sleep $DIETIME
-            start_server
-            RETVAL=$?
-        fi
-        exit $RETVAL
+	restart_server
 	;;
     status)
         if running ;  then

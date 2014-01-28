@@ -1,9 +1,17 @@
 [
     {
+        "if": "{$job.data.LOG_DATE_TIME}",
         "$class": "atm_event",
         "$method": "process",
         "event": "{$job.data}",
         "job_id": "{$job.id}",
+        "$set": "failure"
+    },
+    {
+        "if": "{$job.data.new}",
+        "$class": "util",
+        "$method": "clone",
+        "from": "{$job.data}",
         "$set": "failure"
     },
     {
@@ -17,6 +25,7 @@
         "$method": "log",
         "job": "{$job}",
         "format": "Processed: %s",
+        "important": true,
         "args": [ "{$failure}" ]
     },
     {
@@ -83,43 +92,28 @@
     },
     {
         "if": "{$failure.update}",
-        "$class": "wait",
-        "secs": 2,
-        "$set": "ready_to_process_good"
-    },
-    {
-        "if": "{$ready_to_process_good}",
         "$every": "{$failure.events}",
         "$tasks":[
             {
                 "if": "[*every.item.good]",
-                "$class": "util",
-                "$method": "set",
-                "name": ["job_id", "event"],
-                "value":["[*every.item.job_id]", "{$job.data}"],
-                "$set": "cancel_data"
-            },
-            {
-                "if": "[*cancel_data]",
                 "$class": "job",
-                "name": "cancel-atm_device_event",
+                "name": "atm_failure_cancel",
                 "title": "[*every.item.job_id]",
-                "data": "[*cancel_data]",
+                "data": "[*every.item]",
                 "$set": "cancel_job"
             },
             {
                 "$class": "job",
                 "$method": "log",
                 "job": "{*job}",
-                "format": "cancel job: %s",
+                "format": "Stop-job: %s",
                 "args": [ "[*cancel_job]" ]
             },
             {
-                "if": "[*cancel_data]",
+                "if": "[*every.item.good]",
                 "$class": "atm_event",
                 "$method": "update",
                 "eventId": "[*every.item.id]",
-                "estate": "stopped",
                 "status": "fixed"
             },
             {

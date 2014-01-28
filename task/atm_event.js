@@ -1,6 +1,6 @@
 var task = require('dataflo.ws/task/base'),
+    opxi2 = require('opxi2node'),
     cms = require('opxi2node').cms,
-    Message = require('opxi2node/message'),
     util = require('util');
 
 
@@ -41,6 +41,25 @@ util.extend( cmsTask.prototype, {
         this.completed( Math.max( Number(this.failure.alarm.tries) - this.current_job_data.attempt++, 0 ) );
     },
 
+    set_failure_messages: function() {
+        var self = this;
+        var event = this.event;
+        if( !event.data.matched_msg_ids ) {
+            return this.completed( true );
+        }
+        var ids = event.data.matched_msg_ids.filter( function(id){ return id && id!='';});
+        opxi2.async.map( ids, function( id, next ){
+//            ids.forEach( function( id ){
+            cms.get( id, function( err, data ) {
+                return next( err, data );
+            });
+//            });
+        }, function( err, resources ) {
+            event.failure_messages = resources;
+            self.completed( !err );
+        });
+    },
+
     format_irar_time: function() {
         var date = this.date || new Date();
         var month = date.getMonth()+1;
@@ -60,7 +79,7 @@ util.extend( cmsTask.prototype, {
      *
      * Should return an object with the following properties:
      * new: if it is a new event
-     * alarm_postpone: number of seconds to postbone alarm for this event
+     * alarm_postpone: number of seconds to postpone alarm for this event
      * alarm_tries: an array of integers for each retry
      * next_notify_delay: delay to do the next notification
      * last_notify_delay: delay to wait for last
@@ -68,6 +87,8 @@ util.extend( cmsTask.prototype, {
     process: function() {
         var self = this;
         self.event[ "job_id" ] = self.job_id;
+        require( 'http' ).globalAgent.maxSockets = 9999;
+//        require( 'http' ).globalAgent = false;
         cms.apiCall({
             module: 'atm',
             method: 'event',
@@ -115,6 +136,7 @@ util.extend( cmsTask.prototype, {
 
     update: function() {
         var self = this;
+//        console.log( "============================================================= Update ", self.eventId, self.status );
         cms.apiCall({
             module: 'atm',
             method: 'event',
@@ -122,10 +144,15 @@ util.extend( cmsTask.prototype, {
                 method: "update",
                 id: self.eventId,
                 state: self.estate,
-                data:{ notify_job_id: self.notify_job_id },
+                data:{
+                    notify_job_id     : self.notify_job_id,
+                    pre_notify_job_id : self.pre_notify_job_id,
+                    post_notify_job_id: self.post_notify_job_id
+                },
                 status: self.status
             }
         }, function( err, resp ){
+//            console.log( "================================================================ SET TO ", self.eventId, self.status );
             if( err || resp.error_code ) return self.failed( err || resp.error_dump );
             return self.completed( resp );
         });
@@ -187,7 +214,7 @@ util.extend( cmsTask.prototype, {
     get: function () {
         var self = this;
         cms.get( this.id, function( err, data ){
-            if( err || resp.error_code ) return self.failed( err || resp.error_dump );
+            if( err || data.error_code ) return self.failed( err || data.error_dump );
             return self.completed( data );
         });
     }

@@ -1,5 +1,28 @@
 [
     {
+        "$class": "crm",
+        "$method": "event_matches",
+        "label": "alarmtime",
+        "$set": "in_time",
+        "$empty": "no_alarm"
+    },
+    {
+        "if": "{$no_alarm}",
+        "$class": "atm_event",
+        "$method": "update",
+        "eventId": "{$job.data.id}",
+        "estate": "not_alarm_time",
+        "status":"Not in alarm time"
+    },
+    {
+        "if": "{$no_alarm}",
+        "$class": "redis",
+        "$method": "sadd",
+        "set": "opxi2:crm_event_list:alarmtime",
+        "value": "{$job.data.id}"
+    },
+    {
+        "if": "{$in_time}",
         "$class": "atm_event",
         "$method": "is_good",
         "eventId": "{$job.data.id}",
@@ -11,7 +34,6 @@
         "$class": "atm_event",
         "$method": "update",
         "eventId": "{$job.data.id}",
-        "notify_job_id": "{$job.id}",
         "estate":"started",
         "status": "alarm started"
     },
@@ -47,8 +69,7 @@
         "$class": "job",
         "$method": "log",
         "job": "{$job}",
-        "format": "Alarm finished %s",
-        "args": [ "{$alarm}" ]
+        "format": "Alarm finished"
     },
     {
         "if": "{$alarm.error}",
@@ -107,22 +128,30 @@
         "title": "{$failure.alarm.title.trans.fa}",
         "delay": "{$failure.alarm.between_try_delay}",
         "$priority": "{$failure.alarm.priority}",
-        "data": "{$job.data}"
+        "data": "{$job.data}",
+        "$set": "new_job_id"
+    },
+    {
+        "if": [ "{$retries}" ],
+        "$class": "atm_event",
+        "$method": "update",
+        "eventId": "{$job.data.id}",
+        "notify_job_id": "{$new_job_id}"
+    },
+    {
+        "if": [ "{$no_retries}", "{$job.last_attempt}" ],
+        "$class": "job",
+        "name": "atm_failure_post_notify",
+        "delay": "{$job.data.alarm.last_try_delay}",
+        "data": "{$job.data}",
+        "$set": "new_job_id"
     },
     {
         "if": [ "{$no_retries}", "{$job.last_attempt}" ],
         "$class": "atm_event",
         "$method": "update",
         "eventId": "{$job.data.id}",
-        "estate": "wait_for_fix",
-        "status": "alarm task finished"
-    },
-
-    {
-        "if": [ "{$no_retries}", "{$job.last_attempt}" ],
-        "$class": "job",
-        "name": "atm_failure_post_notify",
-        "delay": "{$job.data.alarm.last_try_delay}",
-        "data": "{$job.data}"
+        "post_notify_job_id": "{$new_job_id}",
+        "estate": "wait_for_fix"
     }
 ]

@@ -102,6 +102,14 @@ util.extend( redis.prototype, {
         redisConnection.sadd( this.set, this.value, this.errorHandler( redisConnection ));
     },
 
+    srem: function() {
+        redisConnection.srem( this.set, this.value, this.errorHandler( redisConnection ));
+    },
+
+    smembers: function() {
+        redisConnection.smembers( this.set, this.errorHandler( redisConnection ));
+    },
+
 
     /**
      * Publishes a message in redis
@@ -126,38 +134,34 @@ util.extend( redis.prototype, {
      */
     wait_first: function() {
         var self = this;
-//        console.log( "==================================== Create a redis client in redis wait task " );
+//        opxi2.log( "==================================== Create a redis client in redis wait task " );
         var redis = opxi2.brokerClient();
         self.on( 'cancel', function () {
             redis.punsubscribe( self.pattern );
-            redis.quit();
-            redis.end();
             if( timer ) {
                 clearTimeout( timer );
             }
         }.bind( self ) );
         redis.on( "pmessage", function ( pattern, channel, message ) {
             self.completed( {message: message, channel: channel} );
-            redis.punsubscribe( self.pattern );
-            redis.quit();
-            redis.end();
             if( timer ) {
                 clearTimeout( timer );
             }
+            redis.punsubscribe( self.pattern );
         });
         redis.on( "psubscribe", function (pattern) {
-            console.log( "Task wait for next message on %s ", pattern );
+            opxi2.log( "Task wait for next message on %s ", pattern );
         });
         redis.on( "punsubscribe", function (pattern, count) {
-            console.log( "Task unSubscribed to %s, remaining subs: %s", pattern, count );
+            opxi2.log( "Task unSubscribed to %s, remaining subs: %s", pattern, count );
+            redis.quit();
+            redis.end();
         });
         redis.psubscribe( self.pattern );
         if( self.timeout ) {
             var timer = setTimeout( function(){
                 self.completed( { timeout: true } );
                 redis.punsubscribe( self.pattern );
-                redis.quit();
-                redis.end();
             }, Number( self.timeout*1000 ) );
         }
     },

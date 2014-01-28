@@ -1,15 +1,15 @@
 {
     "name": "opxi2flowy",
-    "version": "0.0.1",
+    "version": "0.1.0",
     "description": "Opxi2 Flow Based Messaging Core",
-    "author": "Behrad",
+    "author": "Behrad <behradz@gmail.com>",
     "license": "BSD",
     "readmeFilename": "README.md",
     "repository": {
         "type": "git",
         "url": "https://github.com/behrad/opxi2flowy"
     },
-    "main": "main.js",
+    "main": "opxi2flowy.js",
     "bin": { "opxi2flowy": "bin/opxi2flowy" },
     "scripts": {
         "postinstall": "node -e \"require('dataflo.ws').install('opxi2flowy')\"",

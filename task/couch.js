@@ -64,8 +64,8 @@ util.extend( couch.prototype, {
     attach_body: function( id, rev, attachment, clbk ) {
         opxi2.db.attachment.insert(id, attachment.name, attachment.data, attachment.content_type, {rev: rev}, function( err, body ) {
             if (err) {
-                clbk && clbk(err);
-                return console.log( err );
+//                console.log( err );
+                return clbk && clbk(err);
             }
             clbk && clbk();
         });

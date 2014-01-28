@@ -12,6 +12,7 @@
         "blocking": true,
         "data": "{$msg}",
         "$priority": "{$job._priority}",
+        "$retries": 1,
         "$set": "outbound_job"
     },
     {
@@ -33,7 +34,7 @@
     {
         "if": "{$outbound_job.ok}",
         "$function":"join",
-        "$origin":[ "opxi2.outbound.", "{$msg.channel}", ".delivery.*.delivered" ],
+        "$origin":[ "opxi2.outbound.", "{$msg.channel}", ".delivery.", "{$outbound_job.id}", ".delivered" ],
         "$args":[""],
         "$set":"delivery_pattern"
     },
@@ -42,8 +43,8 @@
         "$class": "job",
         "$method": "log",
         "job": "{$job}",
-        "format": "Waiting %d for response...",
-        "args": "{$job.data.answer_timeout}"
+        "format": "Waiting %d for response on %s",
+        "args": ["{$job.data.answer_timeout}","{$delivery_pattern}"]
     },
     {
         "if": "{$outbound_job.ok}",

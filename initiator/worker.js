@@ -44,19 +44,19 @@ worker.prototype.ready = function () {
  */
 worker.prototype.listen = function( workflowConfig ) {
     var self = this;
-    console.log("Started flow worker %s", workflowConfig.name );
+    opxi2.log("Started flow worker %s(%d)", workflowConfig.name, workflowConfig.concurrency );
     opxi2.taskq.process( workflowConfig.name, workflowConfig.concurrency, function (job, done) {
         job.current_attempt = Number(job._attempts)+1 || 1;
         job.first_attempt = (job.current_attempt==1);
         job.last_attempt = (job.current_attempt === Number(job._max_attempts));
-        var wf = new Workflow( util.extend(true, {}, workflowConfig ), {
+        var wf = new Workflow( util.extend(true, {quiet: !opxi2.CONFIG.flows.verbose}, workflowConfig ), {
             name: workflowConfig.name,
             job: job
         });
         self.workflow_job_map[ job.id ] = wf;
         wf.on( 'completed', self.onCompleted(job,done).bind( self ) );
         wf.on( 'failed', self.onFailed(job,done).bind( self ) );
-        console.log("Start flow %s for job %s(%s)", wf.id, workflowConfig.name, job.id );
+        opxi2.log("Start flow %s for job %s(%s)", wf.id, workflowConfig.name, job.id );
         wf.run();
     });
 
@@ -69,7 +69,7 @@ worker.prototype.listen = function( workflowConfig ) {
 worker.prototype.cancelFlow = function( jobId ) {
     var wf = this.workflow_job_map[ jobId /*job.data.job_id*/ ];
     if( wf ) {
-        console.log( "Canceling flow %s with id %s by %s ", wf.name, wf.id, jobId );
+        opxi2.log( "Canceling flow %s with id %s by %s ", wf.name, wf.id, jobId );
         wf.tasks.forEach( function( task ){
             task.cancel();
         });
@@ -80,7 +80,6 @@ worker.prototype.cancelFlow = function( jobId ) {
 
 worker.prototype.subscribe_for_flow_cancels = function( config ) {
     var self = this;
-//    console.log( "==================================== Create a redis client in worker for cancels ", config.name );
     var broker = opxi2.brokerClient();
     broker.on( "message", function( channel, message ) {
         self.cancelFlow( message );
@@ -91,7 +90,6 @@ worker.prototype.subscribe_for_flow_cancels = function( config ) {
     return broker;
 };
 
-//console.log( "==================================== Create a redis client for publishing cancels " );
 var broker = opxi2.brokerClient();
 
 worker.prototype.process_cancels = function( config ) {
@@ -99,20 +97,19 @@ worker.prototype.process_cancels = function( config ) {
         if( !job.data.job_id ) {
             return done( {error: true, message: "No job_id specified" } );
         }
-        console.log( "Got Cancel flowjob " + 'cancel-' + config.name + "("+job.id+") for (" + job.data.job_id + ")" );
+        opxi2.log( "Got Cancel flowjob " + 'cancel-' + config.name + "("+job.id+") for (" + job.data.job_id + ")" );
         if( !this.cancelFlow( job.data.job_id ) ) {
-            broker.publish( "opxi2.flowy.cancel."+config.name, job.data.job_id, function(err){ err && console.log( err ); });
+            broker.publish( "opxi2.flowy.cancel."+config.name, job.data.job_id, function(err){ err && opxi2.log( err ); });
         }
-        // TODO remove job_id if it is in delay mode!!!
         opxi2.kue.Job.get( job.data.job_id, function( err, to_be_canceled_job ){
             if( err ) {
-                return done( {error: true, message: "No job to be canceled for id " + job.data.job_id, reason: err } );
+                return job.set( 'data' , JSON.stringify({message: "No job to be canceled for id " + job.data.job_id, reason: err }), done );
             }
             // should we check to_be_canceled_job.toJSON().state == "delayed" !?
             to_be_canceled_job.log( "Canceled by " + job.id );
-            console.log("Canceled job %s(%s) (in state %s) by %s ", config.name, job.data.job_id, to_be_canceled_job.toJSON().state, job.id );
-            if( to_be_canceled_job.toJSON().state != 'complete' ) {
-                to_be_canceled_job.complete()/*.update()*/;
+            if( to_be_canceled_job.toJSON().state != 'complete' && to_be_canceled_job.toJSON().state != 'failed' ) {
+                opxi2.log("Canceled job %s(%s) (in state %s) by %s ", config.name, job.data.job_id, to_be_canceled_job.toJSON().state, job.id );
+                to_be_canceled_job.complete();
             }
             done();
         });
@@ -129,24 +126,24 @@ worker.prototype.onCompleted = function( job, done ) {
                 checkName = wf.$failcheck;
             }
             if ( !Workflow.isEmpty(check) ) { // Workflows condition is satisfied
-                console.log( "Worker flow %s(%s) completed with id %s", wf.name, job.id, wf.id );
+                opxi2.log( "Worker flow %s(%s) completed with id %s", wf.name, job.id, wf.id );
                 result.flow_id = wf.id;
                 job.set( 'data' , JSON.stringify(result), done );
             } else { // Workflows condition is not satisfied
                 /*if( Number(job._max_attempts) == 1 ) {
-                    console.log( "Worker flow %s backdata failed %j=%j on one-try job", wf.name, checkName, check );
+                    opxi2.log( "Worker flow %s backdata failed %j=%j on one-try job", wf.name, checkName, check );
                     done( { error: true, message: 'Worker '+job.type+', backdata '+checkName+' failed' } );
                 } else*/ if( job.last_attempt ) { // We are in job's last try! mark job Finished!
-                    console.log( "Worker flow %s backdata failed %j=%j, set last attempt data", wf.name, checkName, check );
+                    opxi2.log( "Worker flow %s backdata failed %j=%j, set last attempt data", wf.name, checkName, check );
                     var errMsg = { message: 'Flow '+job.type+'('+wf.id+') backdata \''+checkName+'\' failed' };
                     job.set( 'data' , JSON.stringify( util.extend( true, errMsg, result ) ), done );
                 } else { // Job still has retries available, flow's condition is failed!
-                    console.log( "Worker flow %s backdata failed %j=%j, but is not its last attempt", wf.name, checkName, check );
+                    opxi2.log( "Worker flow %s backdata failed %j=%j, but is not its last attempt", wf.name, checkName, check );
                     if( Number(job.delay()) > 0 ) { // This was a delayed job worker, fix for delayed retry!
                         job.error( { error: true, message: 'Flow '+job.type+'('+wf.id+') backdata \''+checkName+'\' failed' } );
                         done(); // prevent the job from being failed, and then inactive by Kue!
                         job.attempt( function(error, remaining, attempts, max) {
-                            if (error) return console.log( error );
+                            if (error) return opxi2.log( error );
                             if( remaining > 0 ) {
                                 // Mark job as delayed by hand!
                                 job.delay( Number(job.delay()) ).update();
@@ -158,7 +155,7 @@ worker.prototype.onCompleted = function( job, done ) {
                 }
             }
         } else { // Simple workflow without any condition finished!
-            console.log( "Worker %s(%s)'s flow completed", wf.name, job.id );
+            opxi2.log( "Worker %s(%s)'s flow completed", wf.name, job.id );
             job.get( 'data', function(error, result) {
                 if( !error && result ) {
                     result.flow_id = wf.id;
@@ -168,6 +165,7 @@ worker.prototype.onCompleted = function( job, done ) {
                 }
             });
         }
+        delete this.workflow_job_map[ job.id ];
         this.workflow_job_map[ job.id ] = undefined;
     }.bind( this );
 };
@@ -177,37 +175,43 @@ worker.prototype.onFailed = function( job, done ) {
         job.data.flow_id = wf.id;
         var err = wf.error; // The object or string you passed to task.failed()
         if( !err ) { // no error object :o! so this should be a canceled flow
-            console.log( "Worker %s(%s)'s flow %s canceled?", job.type, job.id, wf.id );
+            opxi2.log( "Worker %s(%s)'s flow %s canceled?", job.type, job.id, wf.id );
             err = { canceled: true, message: job.type + "'s flow "+wf.id+" canceled!?"};
         } else {
-            console.log( "Worker %s(%s)'s flow %s failed", job.type, job.id, wf.id );
+            opxi2.log( "Worker %s(%s)'s flow %s failed", job.type, job.id, wf.id );
             if( err && err.length && err.split ) { // passed error is string
-                err = { error: true, message: job.type + '\'s flow error: ' + wf.error };
+                err = { error: true, message: wf.id + ' flow error: ' + wf.error };
             }/* else if( err && err.error == undefined ) { // passed error is object
                 err = { error: true, message: job.type + '\'s flow error: ' + JSON.stringify( err ) };
             }*/
         }
-        job.set( 'data' , JSON.stringify( util.extend( true, job.data, err ) ), done );
+
+        if( wf.fail_on_fail ) {
+            done( err );
+        } else {
+            job.set( 'data' , JSON.stringify( util.extend( true, job.data, err ) ), done );
+        }
+        delete this.workflow_job_map[ job.id ];
         this.workflow_job_map[ job.id ] = undefined;
     }.bind( this );
 };
 
 worker.prototype.flow_housekeeping = function () {
-    console.log( "Start worker flow initiator housekeeping..." );
+    opxi2.log( "Start worker flow initiator housekeeping..." );
     var clean_to = new Date().getTime() - HOUSE_KEEPING_INTERVAL;
 //    this.workflow_job_map.forEach( function( flow, i ) {
     for( var i in this.workflow_job_map ){
         var flow = this.workflow_job_map[ i ];
         if( flow && flow.created < clean_to ) {
             if( flow.stopped ) {
+                delete this.workflow_job_map[ i ];
                 this.workflow_job_map[ i ] = undefined;
-//                delete this.workflow_job_map[ flow.id ];
             } else {
-                console.log( "Flow(%s) could not be housekeeped (is running?)", flow.id );
+                opxi2.log( "Flow(%s) could not be housekeeped (is running?)", flow.id );
             }
         }
     }
-//        console.log( "Flow %d(%s to %s): ready:%s, idle:%s, haveCompletedTasks:%s", flow.id, flow.created, flow.stopped, flow.ready, flow.isIdle, flow.haveCompletedTasks );
+//        opxi2.log( "Flow %d(%s to %s): ready:%s, idle:%s, haveCompletedTasks:%s", flow.id, flow.created, flow.stopped, flow.ready, flow.isIdle, flow.haveCompletedTasks );
 //    }.bind( this ));
 };
 

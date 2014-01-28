@@ -22,8 +22,9 @@
         "worker": {
             "workflows": [{
                 "name": "outbound-msg",
-                "concurrency": 60,
+                "concurrency": 30,
                 "$backdata": "log",
+                "fail_on_fail": true,
                 "tasks": "<message/outbound.json>"
             },{
                 "name": "outbound-notify-first",
@@ -38,7 +39,7 @@
                 "tasks": "<campaign/run.json>"
             },{
                 "name": "authorize-msg",
-                "concurrency": 200,
+                "concurrency": 100,
                 "$backdata": "auth",
                 "tasks": "<message/authorize.json>"
             },{
@@ -63,35 +64,40 @@
                 "tasks": "<message/delivery-notify.json>"
             },{
                 "name": "atm_device_event",
-                "concurrency": 100,
+                "concurrency": 150,
                 "$backdata": "failure_result",
+                "fail_on_fail": true,
                 "tasks": "<atm/process.json>"
             },{
                 "name": "atm_failure_notify",
-                "concurrency": 50,
+                "concurrency": 25,
                 "$backdata": "alarm",
                 "tasks": "<atm/notify.json>"
             },{
                 "name": "atm_failure_alarm",
-                "concurrency": 50,
+                "concurrency": 25,
                 "$backdata": "alarm_answered",
                 "tasks": "<atm/alarm.json>"
             },{
                 "name": "atm_supervisor_notify",
-                "concurrency": 50,
+                "concurrency": 25,
                 "tasks": "<atm/supervisory.json>"
             },{
                 "name": "atm_event_notify",
-                "concurrency": 300,
+                "concurrency": 25,
                 "tasks": "<atm/start_notification_process.json>"
             },{
                 "name": "atm_failure_pre_notify",
-                "concurrency": 100,
+                "concurrency": 25,
                 "tasks": "<atm/pre_notify.json>"
             },{
                 "name": "atm_failure_post_notify",
-                "concurrency": 100,
+                "concurrency": 25,
                 "tasks": "<atm/post_notify.json>"
+            },{
+                "name": "atm_failure_cancel",
+                "concurrency": 25,
+                "tasks": "<atm/stop.json>"
             }
 
 
@@ -154,7 +160,7 @@
 
 
             ,{
-				"pattern": "opxi2.df1.*.alo",
+				"pattern": "opxi2.df1.*",
 				"tasks": [
                     {
                         "$class": "atm_event",
@@ -163,13 +169,13 @@
                     },
                     {
                         "$class": "atm_event",
-                        "$method": "before_notification_delay",
-                        "failure": "{$failure}",
-                        "$set": "postpone"
+                        "$method": "set_failure_messages",
+                        "event": "{$failure}",
+                        "$set": "ready"
                     },
                     {
                         "$function": "console.print",
-                        "$args": ["message ", "{$postpone}"]
+                        "$args": ["message ", "{$ready}", "{$failure}"]
                     }
             ]}
 

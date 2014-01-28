@@ -95,17 +95,11 @@
         "alarm_id": "{$job.data.id}",
         "media_url": "{$job.data.alarm.media_url}",
         "destinations": "{$branch_contacts}",
-        "answer_timeout": 30,
+        "answer_timeout": 240,
         "$set": "multi_msg_alarm"
     },
     {
         "if": "{$multi_msg_alarm}",
-        "$class": "atm_event",
-        "$method": "update",
-        "eventId":"{$job.data.id}",
-        "status":"sending alarm"
-    },
-    {
         "$class": "atm_event",
         "$method": "event_atm",
         "eventId": "{$job.data.id}",
@@ -120,6 +114,7 @@
         "$class": "moment",
         "$method": "time_str",
         "date": "{$event.failure_time}",
+        "format": "HH:mm",
         "$set":"time"
     },
     {
@@ -134,6 +129,13 @@
         "base": "{$event}",
         "name":[ "time", "jalali_date" ],
         "value":[ "{$time}", "{$jalali_date}" ],
+        "$set": "pre_ready"
+    },
+    {
+        "if": "{$pre_ready}",
+        "$class": "atm_event",
+        "$method": "set_failure_messages",
+        "event": "{$event}",
         "$set": "ready"
     },
     {
@@ -154,6 +156,13 @@
     },
     {
         "if": [ "{$final_msg}" ],
+        "$class": "atm_event",
+        "$method": "update",
+        "eventId":"{$job.data.id}",
+        "status":"sending alarm"
+    },
+    {
+        "if": [ "{$final_msg}" ],
         "$class": "job",
         "$method": "log",
         "job": "{$job}",
@@ -161,6 +170,7 @@
         "args": "{$branch_contacts.length}"
     },
     {
+        "if": [ "{$final_msg}" ],
         "$class": "job",
         "name": "outbound-notify-first",
         "blocking": true,
