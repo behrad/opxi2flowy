@@ -97,6 +97,7 @@ start() {
         # running.
         forever --minUptime 5000 --spinSleepTime 2000 -m 1000 -a -l $LOGFILE \
             --pidFile $FOREVER_PID_DIR/$PIDFILE --sourceDir $APPLICATION_DIRECTORY \
+            --killSignal=SIGTERM \
             start $APPLICATION_START.js 2>&1 >/dev/null
         forever list | grep $APPLICATION_START
         RETVAL=$?
@@ -115,6 +116,7 @@ stop() {
  
 restart() {
     echo "Restarting $NAME"
+#    forever restart $APPLICATION_START.js
 #    stop
 #    start
     kill `cat $FOREVER_PID_DIR/$PIDFILE`

@@ -104,9 +104,32 @@
 
             ,{
                 "name": "test_job",
-                "concurrency": 1,
+                "concurrency": 100,
                 "$backdata": "tt",
                 "tasks": [{
+                    "$class": "wait",
+                    "secs": "2",
+                    "$set": "ready"
+                },{
+                    "$if": "{$ready}",
+                    "$function": "JSON.parse",
+                    "$args": "{\"finished\": true }",
+                    "$set": "testresult"
+                },{
+                    "$function": "console.print",
+					"$args": [ "New message: ", "{$job.current_attempt}" ]
+                }]
+            }
+            ,{
+                "name": "test_job_fast",
+                "concurrency": 500,
+                "$backdata": "tt2",
+                "tasks": [{
+                    "$class": "wait",
+                    "secs": "5",
+                    "$set": "ready"
+                },{
+                    "$if": "{$ready}",
                     "$function": "JSON.parse",
                     "$args": "{\"finished\": true }",
                     "$set": "testresult"
@@ -158,24 +181,23 @@
 			}
 
 
-
             ,{
 				"pattern": "opxi2.df1.*",
 				"tasks": [
                     {
-                        "$class": "atm_event",
-                        "id": "{$message}",
-                        "$set": "failure"
-                    },
-                    {
-                        "$class": "atm_event",
-                        "$method": "set_failure_messages",
-                        "event": "{$failure}",
+                        "$class": "wait",
+                        "secs": "5",
                         "$set": "ready"
                     },
                     {
+                        "$class": "atm_event",
+                        "$method": "throwError",
+                        "param": "{$ready}",
+                        "$set": "ready2"
+                    },
+                    {
                         "$function": "console.print",
-                        "$args": ["message ", "{$ready}", "{$failure}"]
+                        "$args": ["message ", "{$ready2}"]
                     }
             ]}
 

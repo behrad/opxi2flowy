@@ -1,28 +1,30 @@
 {
-    "name": "opxi2flowy",
-    "version": "0.1.0",
-    "description": "Opxi2 Flow Based Messaging Core",
-    "author": "Behrad <behradz@gmail.com>",
-    "license": "BSD",
-    "readmeFilename": "README.md",
-    "repository": {
-        "type": "git",
-        "url": "https://github.com/behrad/opxi2flowy"
-    },
-    "main": "opxi2flowy.js",
-    "bin": { "opxi2flowy": "bin/opxi2flowy" },
-    "scripts": {
-        "postinstall": "node -e \"require('dataflo.ws').install('opxi2flowy')\"",
-        "test": "echo \"Error: no test specified\" && exit 1"
-    },
-    "dependencies": {
-        "dataflo.ws": "https://github.com/behrad/dataflo.ws/tarball/master",
-        "moment": "*"
-    },
-    "keywords": [
-        "nodejs",
-        "redis",
-        "dataflo.ws",
-        "workflow"
-    ]
+  "name": "opxi2flowy",
+  "version": "0.1.0",
+  "description": "Opxi2 Flow Based Messaging Core",
+  "author": "Behrad <behradz@gmail.com>",
+  "license": "BSD",
+  "readmeFilename": "README.md",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/behrad/opxi2flowy"
+  },
+  "main": "opxi2flowy.js",
+  "bin": {
+    "opxi2flowy": "bin/opxi2flowy"
+  },
+  "scripts": {
+    "postinstall": "node -e \"require('dataflo.ws').install('opxi2flowy')\"",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "dependencies": {
+    "dataflo.ws": "https://github.com/behrad/dataflo.ws/tarball/master",
+    "moment": "~2.5.1"
+  },
+  "keywords": [
+    "nodejs",
+    "redis",
+    "dataflo.ws",
+    "workflow"
+  ]
 }

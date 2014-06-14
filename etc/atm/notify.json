@@ -56,6 +56,31 @@
     },
     {
         "if": "{$failure_not_fixed}",
+        "$class": "atm_event",
+        "id": "{$job.data.id}",
+        "$set": "failure"
+    },
+    {
+        "if": [ "{$failure}" ],
+        "$class": "atm_event",
+        "$method": "remaining_alarm_retries",
+        "failure": "{$failure}",
+        "current_job_data": "{$job.data}",
+        "$set": "retries",
+        "$empty": "no_retries"
+    },
+    {
+        "if": ["{$failure_not_fixed}","{$job.data.tries}", "{$retries}"],
+        "$class": "job",
+        "name": "atm_failure_alarm",
+        "blocking": true,
+        "data": "{$job.data}",
+        "$priority": "{$job._priority}",
+        "$set": "alarm",
+        "$empty": "alarm_failed"
+    },
+    {
+        "if": ["{$failure_not_fixed}", "{$job.data.tries}", "{$no_retries}"],
         "$class": "job",
         "name": "atm_failure_alarm",
         "blocking": true,
@@ -100,28 +125,6 @@
         "status": "alarm answered, waiting for fix"
     },
     {
-        "if": "{$alarm}",
-        "$class": "atm_event",
-        "id": "{$job.data.id}",
-        "$set": "failure"
-    },
-    {
-        "$class": "atm_event",
-        "$method": "is_good",
-        "event": "{$failure}",
-        "$set": "fixed",
-        "$empty": "not_fixed"
-    },
-    {
-        "if": [ "{$not_fixed}" ],
-        "$class": "atm_event",
-        "$method": "remaining_alarm_retries",
-        "failure": "{$failure}",
-        "current_job_data": "{$job.data}",
-        "$set": "retries",
-        "$empty": "no_retries"
-    },
-    {
         "if": [ "{$retries}" ],
         "$class": "job",
         "name": "atm_failure_notify",
@@ -132,7 +135,7 @@
         "$set": "new_job_id"
     },
     {
-        "if": [ "{$retries}" ],
+        "if": ["{$retries}"],
         "$class": "atm_event",
         "$method": "update",
         "eventId": "{$job.data.id}",

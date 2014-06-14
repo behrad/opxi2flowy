@@ -27,6 +27,11 @@ util.extend( msg.prototype, {
             if( self.sort_by ) {
                 contacts.sort( self.get_sorter( self.sort_by ) );
             }
+            if( self.round ) {
+                for( var j=1; j<=self.round-1; j++ ) {
+                    contacts.push( contacts.shift() );
+                }
+            }
             clbk && clbk( err, contacts, function(err, transformed){
                 if( err ) {
                     return self.failed( err );
@@ -64,7 +69,7 @@ util.extend( msg.prototype, {
             if( err ) {
                 return done( err );
             }
-            var cells = contacts.map( function( contact ) {
+            var cells = contacts.filter( self.isValid.bind(self) ).map( function( contact ) {
                 return self.add_address( "tel_home", contact, "voice" );
             });
             return done( null, cells.filter( self.isValid.bind(self) ) );
@@ -77,7 +82,7 @@ util.extend( msg.prototype, {
             if( err ) {
                 return done( err );
             }
-            var cells = contacts.map( function( contact ) {
+            var cells = contacts.filter( self.isValid.bind(self) ).map( function( contact ) {
                 return self.add_address( "tel_work", contact, "voice" );
             });
             return done( null, cells.filter( self.isValid.bind(self) ) );
@@ -90,7 +95,7 @@ util.extend( msg.prototype, {
             if( err ) {
                 return done( err );
             }
-            var cells = contacts.map( function( contact ) {
+            var cells = contacts.filter( self.isValid.bind(self) ).map( function( contact ) {
                 return self.add_address( "tel_cell", contact, "sms" );
             });
             return done( null, cells.filter( self.isValid.bind(self) ) );
@@ -107,6 +112,7 @@ util.extend( msg.prototype, {
     },
 
     add_address: function( addressField, contact, channel ) {
+//        throw new TypeError( "Cannot read property `dashshagh` of undefined" );
         if( this.isValid( contact[ addressField ], channel ) ) {
             return {
                 id: contact[ 'id' ],

@@ -37,8 +37,9 @@ util.extend( cmsTask.prototype, {
     },
 
     remaining_alarm_retries: function() {
-        this.current_job_data.attempt = this.current_job_data.attempt || 1;
-        this.completed( Math.max( Number(this.failure.alarm.tries) - this.current_job_data.attempt++, 0 ) );
+        this.current_job_data.attempt = this.current_job_data.attempt || 0;
+        this.current_job_data.tries = Number(this.failure.alarm.tries);
+        this.completed( Math.max( Number(this.failure.alarm.tries) - ++this.current_job_data.attempt, 0 ) );
     },
 
     set_failure_messages: function() {
@@ -89,6 +90,7 @@ util.extend( cmsTask.prototype, {
         self.event[ "job_id" ] = self.job_id;
         require( 'http' ).globalAgent.maxSockets = 9999;
 //        require( 'http' ).globalAgent = false;
+//        opxi2.log( "++++++++++++++++++++ Event(%s) ATM=%s ", self.job_id, self.event.TERMINAL || self.event.ATM_ID );
         cms.apiCall({
             module: 'atm',
             method: 'event',
@@ -209,6 +211,12 @@ util.extend( cmsTask.prototype, {
             if( err || resp.error_code ) return self.failed( err || resp.error_dump );
             return self.completed( resp );
         });
+    },
+
+    throwError: function() {
+        var nullObj = null;
+        return nullObj.a;
+//        throw new Error( "This is a manualy generated error..." );
     },
 
     get: function () {

@@ -16,12 +16,6 @@
     },
     {
         "$class": "job",
-        "$method": "progress",
-        "job": "{$job}",
-        "level": 10
-    },
-    {
-        "$class": "job",
         "$method": "log",
         "job": "{$job}",
         "format": "Processed: %s",

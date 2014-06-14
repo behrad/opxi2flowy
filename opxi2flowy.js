@@ -1,9 +1,24 @@
-require('look').start();
+//require('look').start();
 
 /*require('nodetime').profile({
     accountKey: 'ee5c0aff53d6231517a4f04c16dd441dfd34bc7d',
     appName: 'Opxi2Flowy Basamad'
 });*/
+
+
+/*var heapdump = require('heapdump');
+var nextMBThreshold = 0;
+setInterval(function () {
+  var memMB = process.memoryUsage().rss / 1048576;
+  if (memMB > nextMBThreshold) {
+      heapdump.writeSnapshot();
+      nextMBThreshold += 100;
+  }
+}, 6000 * 2);*/
+
+
+
+
 
 var cluster = require( 'cluster' );
 var numCPUs = require('os').cpus().length;
@@ -14,7 +29,7 @@ var numWorkers = numCPUs;
 //  args : ["--use", "https"],
 //  silent : true
 //});
-
+var is_running = true;
 var opxi2_workers = [];
 var opxi2_workers_size = opxi2_workers.length;
 
@@ -27,9 +42,10 @@ if (cluster.isMaster) {
             }
             opxi2_workers_size = opxi2_workers.length;
         }
-        var exitCode = worker.process.exitCode;
-        console.log('Worker [' + worker.process.pid + '] died by (' + signal + ','+exitCode+'), re-spawning...');
-        createWorker();
+        if( is_running ) {
+            console.log('Worker [' + worker.process.pid + '] died ('+worker.process.exitCode+'), re-spawning...');
+            createWorker();
+        }
     });
     console.log( "Going to spawn %d workers by master pid %s", numWorkers, process.pid );
 //    bootstrap_flow( "all" );
@@ -86,6 +102,7 @@ function bind_term_recovery( process ) {
 
 function shutdown_gracefully( process ) {
     if( cluster.isMaster ) {
+        is_running = false;
         opxi2_workers_size++;
         require( 'opxi2node').gracefulShutdown( function(err){
             quit_if_ready();

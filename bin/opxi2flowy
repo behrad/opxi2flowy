@@ -74,7 +74,9 @@ running() {
 
 start_server() {
     cd ${DIR}
-    forever start -m 1000 --minUptime 2000 --spinSleepTime 2000 -a -p ${FOREVER_DIR} --pidFile ${SCRIPT_NAME}.pid -l ${LOGDIR}/${SCRIPT_NAME}.log --sourceDir ${DIR} ${SCRIPT_FILE} 2>&1 >/dev/null
+    forever start -m 1000 --minUptime 2000 --spinSleepTime 2000 \
+    --killSignal=SIGTERM -a -p ${FOREVER_DIR} --pidFile ${SCRIPT_NAME}.pid \
+    -l ${LOGDIR}/${SCRIPT_NAME}.log --sourceDir ${DIR} ${SCRIPT_FILE} 2>&1 >/dev/null
     forever list
     return $?
 }

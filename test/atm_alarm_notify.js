@@ -148,6 +148,10 @@ var i = 0;
 
 if( process.argv[2] == 'good' ) {
     good().save();
+} else if( process.argv[2] == 'bad' ) {
+    bad( d ).save();
+} else if( process.argv[2] == 'bad_CT' ) {
+    bad( C1R0 ).save();
 } else if( process.argv[2] == 'race' ) {
     var b = bad(d);
     var g = good();
@@ -157,7 +161,7 @@ if( process.argv[2] == 'good' ) {
 
     setTimeout( function(){
         var totalEvents = [];
-        for( var i=0; i<1000; i++ ) {
+        for( var i=0; i<100; i++ ) {
             totalEvents[ i ] = i;
         }
         require('async').forEach(totalEvents, function(i, callback) {
@@ -165,7 +169,7 @@ if( process.argv[2] == 'good' ) {
         }, function(err) {
             console.log( "finished ", err );
         });
-    }, 5000 );
+    }, 3000 );
 
 //    bad( C1R1 ).save();
 //    bad( C3R0 ).save();
